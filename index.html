@@ -2,49 +2,18 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>شبراوي جروب - متجر الموبايلات</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متجر شبراوي جروب</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="dark-mode">
-    <div class="dashboard-container">
-        <header>
-            <h1>شبراوي جروب - Shbrawy Group</h1>
-            <p>بحالة الزيرو | اشتري وأنت مطمن</p>
-        </header>
-
-        <div class="admin-panel">
-            <h3>➕ إضافة جهاز جديد</h3>
-            <div class="input-group">
-                <input type="text" id="new-name" placeholder="اسم الموبايل">
-                <input type="text" id="new-price" placeholder="السعر">
-                <input type="text" id="new-folder" placeholder="اسم فولدر الصور (مثلاً: a34)">
-                <select id="new-cat">
-                    <option value="samsung">سامسونج</option>
-                    <option value="iphone">آيفون</option>
-                    <option value="infinix">إنفينكس</option>
-                    <option value="oppo">أوبو</option>
-                </select>
-                <button onclick="addNewPhone()" class="add-btn">إضافة الجهاز</button>
-            </div>
-        </div>
-
-        <div class="category-grid" id="category-grid">
-            <div class="cat-card" onclick="showCategory('samsung')">📱 سامسونج</div>
-            <div class="cat-card" onclick="showCategory('iphone')">🍎 آيفون</div>
-            <div class="cat-card" onclick="showCategory('infinix')">🔋 إنفينكس</div>
-            <div class="cat-card" onclick="showCategory('oppo')">📸 أوبو</div>
-        </div>
-
-        <div id="product-display" style="display:none;">
-            <button class="back-btn" onclick="backToHome()">⬅️ رجوع للأقسام</button>
-            <h2 id="cat-title" style="margin:20px 0; color:#38bdf8;"></h2>
-            <div class="product-grid" id="product-list"></div>
-        </div>
-    </div>
-
-    <div id="product-modal" class="modal">
-        <div class="modal-content" id="modal-body"></div>
-    </div>
+<body>
+    <header>
+        <h1>شبراوي جروب - أحدث الأجهزة</h1>
+    </header>
+    
+    <main id="products-display">
+        <!-- هنا JavaScript هيعرض الأجهزة اللي ضفتها -->
+    </main>
 
     <script src="script.js"></script>
 </body>
