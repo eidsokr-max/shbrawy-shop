@@ -1,24 +1,38 @@
-// كود بسيط يشغل الموقع ويحفظ الداتا في المتصفح أونلاين
-document.getElementById('add-device-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    let device = {
-        name: document.getElementById('name').value,
-        price: document.getElementById('price').value,
-        folder: document.getElementById('folder').value,
-        category: document.getElementById('category').value
-    };
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-    let devices = JSON.parse(localStorage.getItem('shbrawy_data') || '[]');
-    devices.push(device);
-    localStorage.setItem('shbrawy_data', JSON.stringify(devices));
-    
-    alert("تم إضافة الجهاز يا أبو آدم!");
-    window.location.reload(); // تحديث الصفحة عشان تظهر
-});
+const firebaseConfig = {
+  apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
+  authDomain: "shbrawy-shop.firebaseapp.com",
+  projectId: "shbrawy-shop",
+  storageBucket: "shbrawy-shop.firebasestorage.app",
+  messagingSenderId: "619982205483",
+  appId: "1:619982205483:web:cab9426ce2888220ef306e",
+  measurementId: "G-VEWYWQM3XF"
+};
 
-function displayProducts() {
-    let devices = JSON.parse(localStorage.getItem('shbrawy_data') || '[]');
-    let display = document.getElementById('products-display');
-    // هنا كود عرض الأجهزة
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const form = document.getElementById('add-device-form');
+if (form) {
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await addDoc(collection(db, "products"), {
+            brand: document.getElementById('brand').value,
+            model: document.getElementById('model').value,
+            price: document.getElementById('price').value
+        });
+        alert("تم الحفظ!");
+        form.reset();
+    });
+}
+
+const display = document.getElementById('products-list');
+if (display) {
+    const querySnapshot = await getDocs(collection(db, "products"));
+    querySnapshot.forEach((doc) => {
+        const p = doc.data();
+        display.innerHTML += `<div><h3>${p.brand} - ${p.model}</h3><p>${p.price} جنيه</p></div><hr>`;
+    });
 }

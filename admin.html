@@ -2,22 +2,16 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم شبراوي</title>
-    <link rel="stylesheet" href="style.css">
+    <title>لوحة تحكم الأدمن</title>
 </head>
 <body>
-    <h1>إضافة جهاز جديد</h1>
+    <h1>إضافة موبايل جديد</h1>
     <form id="add-device-form">
-        <input type="text" id="category" placeholder="الكاتاجوري" required>
-        <br>
+        <input type="text" id="brand" placeholder="الماركة" required>
         <input type="text" id="model" placeholder="الموديل" required>
-        <br>
-        <button type="submit">إضافة الجهاز</button>
+        <input type="number" id="price" placeholder="السعر" required>
+        <button type="submit">حفظ الجهاز</button>
     </form>
-    <br>
-    <a href="index.html">العودة لصفحة المتجر الرئيسية</a>
-    
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
