@@ -2,12 +2,95 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>متجر شبراوي</title>
+    <title>شبراوي جروب - أحدث الأجهزة</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; text-align: center; padding: 20px; }
+        .card { background: white; padding: 15px; margin: 10px; border-radius: 8px; display: inline-block; width: 200px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #admin-panel { display: none; background: #eee; padding: 20px; margin-top: 20px; border-radius: 8px; }
+        .cat-btn { padding: 10px; margin: 5px; cursor: pointer; }
+    </style>
 </head>
 <body>
-    <h1>شبراوي جروب - أحدث الأجهزة</h1>
-    <div id="products-list">جاري تحميل الأجهزة...</div>
-    
-    <script type="module" src="script.js"></script>
+
+<h1>شبراوي جروب - أحدث الأجهزة</h1>
+
+<div id="categories">
+    <button class="cat-btn" onclick="filterProducts('all')">الكل</button>
+</div>
+
+<div id="product-list">جاري التحميل...</div>
+
+<hr>
+<button onclick="checkAdmin()">دخول لوحة التحكم</button>
+<div id="admin-panel">
+    <h3>إضافة جهاز جديد</h3>
+    <input type="text" id="brand" placeholder="الماركة (Samsung)"><br>
+    <input type="text" id="model" placeholder="الموديل (A34)"><br>
+    <input type="text" id="price" placeholder="السعر (5500)"><br>
+    <button onclick="addProduct()">حفظ الجهاز</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    // ** حط بيانات الـ Config اللي نسختها من الـ Settings هنا **
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
+      authDomain: "shbrawy-shop.firebaseapp.com",
+      projectId: "shbrawy-shop",
+      storageBucket: "shbrawy-shop.firebasestorage.app",
+      messagingSenderId: "619982205483",
+      appId: "1:619982205483:web:cab9426ce2888220ef306e"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    let allProducts = [];
+
+    async function loadProducts() {
+        const querySnapshot = await getDocs(collection(db, "products"));
+        allProducts = [];
+        querySnapshot.forEach((doc) => { allProducts.push(doc.data()); });
+        renderProducts(allProducts);
+        renderCategories();
+    }
+
+    function renderProducts(list) {
+        document.getElementById("product-list").innerHTML = list.map(p => 
+            `<div class="card"><h3>${p.brand}</h3><p>${p.model}</p><p>${p.price} جنيه</p></div>`
+        ).join('');
+    }
+
+    function renderCategories() {
+        const brands = [...new Set(allProducts.map(p => p.brand))];
+        const container = document.getElementById("categories");
+        brands.forEach(b => {
+            container.innerHTML += `<button class="cat-btn" onclick="filterProducts('${b}')">${b}</button>`;
+        });
+    }
+
+    window.filterProducts = (brand) => {
+        if(brand === 'all') renderProducts(allProducts);
+        else renderProducts(allProducts.filter(p => p.brand === brand));
+    }
+
+    window.checkAdmin = () => {
+        const pass = prompt("كلمة مرور المدير:");
+        if(pass === "1234") document.getElementById("admin-panel").style.display = "block";
+    }
+
+    window.addProduct = async () => {
+        await addDoc(collection(db, "products"), {
+            brand: document.getElementById('brand').value,
+            model: document.getElementById('model').value,
+            price: document.getElementById('price').value
+        });
+        alert("تم الحفظ!");
+        loadProducts();
+    }
+
+    loadProducts();
+</script>
 </body>
 </html>
