@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>شبراوي جروب - متجر متكامل</title>
     <style>
-        :root { --primary: #007bff; --danger: #dc3545; --bg: #f8f9fa; }
+        :root { --primary: #007bff; --danger: #dc3545; --warning: #ffc107; --bg: #f8f9fa; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
         header { text-align: center; padding: 20px; }
         .filter-nav { text-align: center; margin-bottom: 20px; }
@@ -16,13 +16,12 @@
         .admin-section { background: white; padding: 30px; border-radius: 15px; margin-top: 50px; border: 2px dashed #007bff; }
         input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
         .btn-action { background: var(--primary); color: white; border: none; padding: 12px 25px; cursor: pointer; border-radius: 5px; width: 100%; }
+        .btn-edit { background: var(--warning); color: black; border: none; padding: 5px 10px; margin: 5px; cursor: pointer; border-radius: 5px; }
     </style>
 </head>
 <body>
 
-<header>
-    <h1>شبراوي جروب - عالم الموبايلات</h1>
-</header>
+<header><h1>شبراوي جروب - عالم الموبايلات</h1></header>
 
 <nav class="filter-nav">
     <button onclick="renderProducts('الكل')">الكل</button>
@@ -33,13 +32,14 @@
 <div id="product-list" class="product-grid">جاري تحميل المنتجات...</div>
 
 <div class="admin-section" id="admin-panel" style="display:none;">
-    <h3>لوحة التحكم الاحترافية</h3>
+    <h3 id="form-title">إضافة منتج جديد</h3>
+    <input type="hidden" id="edit-id">
     <input type="text" id="brand" placeholder="الماركة">
     <input type="text" id="model" placeholder="الموديل">
     <textarea id="desc" placeholder="المواصفات"></textarea>
     <input type="number" id="price" placeholder="السعر">
     <input type="text" id="imgUrl" placeholder="رابط الصورة">
-    <button class="btn-action" onclick="addProduct()">نشر المنتج</button>
+    <button class="btn-action" onclick="saveProduct()">حفظ المنتج</button>
 </div>
 
 <div style="text-align: center; margin-top: 20px;">
@@ -48,7 +48,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, addDoc, deleteDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
     const db = getFirestore(initializeApp({
         apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
@@ -72,21 +72,43 @@
                 <h3>${p.brand} - ${p.model}</h3>
                 <p>${p.desc}</p>
                 <div class="price">${p.price} جنيه</div>
+                <button class="btn-edit" onclick="editProduct('${p.id}')">تعديل</button>
                 <button onclick="deleteProduct('${p.id}')" style="background:var(--danger); color:white; border:none; padding:5px 10px;">حذف</button>
             </div>
         `).join('');
     }
 
-    window.addProduct = async () => {
-        await addDoc(collection(db, "products"), {
+    window.editProduct = (id) => {
+        const p = allProducts.find(item => item.id === id);
+        document.getElementById('edit-id').value = p.id;
+        document.getElementById('brand').value = p.brand;
+        document.getElementById('model').value = p.model;
+        document.getElementById('desc').value = p.desc;
+        document.getElementById('price').value = p.price;
+        document.getElementById('imgUrl').value = p.imgUrl;
+        document.getElementById('form-title').innerText = "تعديل المنتج";
+        document.getElementById('admin-panel').style.display = 'block';
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    window.saveProduct = async () => {
+        const id = document.getElementById('edit-id').value;
+        const data = {
             brand: document.getElementById('brand').value,
             model: document.getElementById('model').value,
             desc: document.getElementById('desc').value,
             price: document.getElementById('price').value,
             imgUrl: document.getElementById('imgUrl').value
-        });
-        alert("تم الإضافة!");
-        fetchProducts();
+        };
+
+        if(id) {
+            await updateDoc(doc(db, "products", id), data);
+            alert("تم التحديث!");
+        } else {
+            await addDoc(collection(db, "products"), data);
+            alert("تمت الإضافة!");
+        }
+        location.reload();
     }
 
     window.deleteProduct = async (id) => {
@@ -102,6 +124,5 @@
 
     fetchProducts();
 </script>
-
 </body>
 </html>
