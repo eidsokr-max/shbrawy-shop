@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
+// عنوان بيتك عند جوجل (مفتاح الربط)
 const firebaseConfig = {
   apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
   authDomain: "shbrawy-shop.firebaseapp.com",
@@ -14,6 +15,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// كود الإضافة (شغال في صفحة admin.html)
 const form = document.getElementById('add-device-form');
 if (form) {
     form.addEventListener('submit', async (e) => {
@@ -28,9 +30,11 @@ if (form) {
     });
 }
 
+// كود العرض (شغال في صفحة index.html)
 const display = document.getElementById('products-list');
 if (display) {
     const querySnapshot = await getDocs(collection(db, "products"));
+    display.innerHTML = ""; 
     querySnapshot.forEach((doc) => {
         const p = doc.data();
         display.innerHTML += `<div><h3>${p.brand} - ${p.model}</h3><p>${p.price} جنيه</p></div><hr>`;
