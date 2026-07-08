@@ -64,7 +64,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let allProducts = [];
-
+let isAdmin = false;
     async function fetchProducts() {
         const snapshot = await getDocs(collection(db, "products"));
         allProducts = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
@@ -80,8 +80,11 @@ let allProducts = [];
                 <h3>${p.brand} - ${p.model}</h3>
                 <p>${p.desc}</p>
                 <div class="price">${p.price} جنيه</div>
-                <button class="btn-edit" onclick="editProduct('${p.id}')">تعديل</button>
-                <button onclick="deleteProduct('${p.id}')" style="background:var(--danger); color:white; border:none; padding:5px 10px;">حذف</button>
+
+${isAdmin ? `
+<button class="btn-edit" onclick="editProduct('${p.id}')">تعديل</button>
+<button onclick="deleteProduct('${p.id}')" style="background:var(--danger); color:white; border:none; padding:5px 10px;">حذف</button>
+` : ''}
             </div>
         `).join('');
     }
@@ -135,7 +138,19 @@ await fetchProducts();    }
     }
 
     window.checkAdmin = () => {
-        if(prompt("كلمة المرور:") === "1234") document.getElementById('admin-panel').style.display = 'block';
+    if(prompt("كلمة المرور:") === "1234") {
+
+        isAdmin = true;
+
+        document.getElementById('admin-panel').style.display = 'block';
+
+        renderProducts('الكل');
+
+    } else {
+
+        alert("كلمة المرور خاطئة");
+
+    }
     }
 
     fetchProducts();
