@@ -1,222 +1,128 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>شبراوي جروب | متجر الموبايلات</title>
-
-    <link rel="stylesheet" href="style.css">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-
+    <title>شبراوي جروب - المتجر المتكامل</title>
+    <style>
+        :root { --primary: #007bff; --danger: #dc3545; --warning: #ffc107; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        header { text-align: center; padding: 20px; }
+        .filter-nav { text-align: center; margin-bottom: 20px; }
+        .filter-nav button { margin: 5px; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; background: #ddd; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        .card img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; }
+        .admin-section { background: white; padding: 30px; border-radius: 15px; margin-top: 50px; border: 2px dashed var(--primary); display: none; }
+        input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .btn-action { background: var(--primary); color: white; border: none; padding: 12px 25px; cursor: pointer; border-radius: 5px; width: 100%; }
+        .btn-edit { background: var(--warning); border: none; padding: 5px 10px; margin: 5px; cursor: pointer; border-radius: 5px; }
+    </style>
 </head>
-
 <body>
 
-<header>
-
-    <div class="logo">
-
-        <i class="fa-solid fa-mobile-screen-button"></i>
-
-        <h1>شبراوي جروب</h1>
-
-    </div>
-
-    <div class="header-text">
-
-        <h2>عالم الموبايلات والإكسسوارات</h2>
-
-        <p>أفضل الأسعار وأحدث الهواتف</p>
-
-    </div>
-
-</header>
-
-<section class="top-search">
-
-    <input
-        type="text"
-        id="searchInput"
-        placeholder="🔍 ابحث عن هاتف...">
-
-    <select id="brandFilter">
-
-        <option value="الكل">كل الماركات</option>
-
-        <option value="سامسونج">سامسونج</option>
-
-        <option value="آيفون">آيفون</option>
-
-        <option value="أوبو">أوبو</option>
-
-        <option value="ريلمي">ريلمي</option>
-
-        <option value="ريدمي">ريدمي</option>
-
-        <option value="فيفو">فيفو</option>
-
-    </select>
-
-</section><section class="toolbar">
-
-    <button id="sortLow">
-        <i class="fa-solid fa-arrow-down-1-9"></i>
-        السعر من الأقل
-    </button>
-
-    <button id="sortHigh">
-        <i class="fa-solid fa-arrow-down-9-1"></i>
-        السعر من الأعلى
-    </button>
-
-    <button id="refreshProducts">
-        <i class="fa-solid fa-rotate"></i>
-        تحديث
-    </button>
-
-    <button id="loginBtn" class="admin-btn">
-        <i class="fa-solid fa-user-shield"></i>
-        دخول المدير
-    </button>
-
-</section>
-
-<main>
-
-    <div id="product-list" class="product-grid">
-
-        <div class="loading">
-
-            <i class="fa-solid fa-spinner fa-spin"></i>
-
-            <p>جاري تحميل المنتجات...</p>
-
-        </div>
-
-    </div>
-
-</main>
-
-<section id="adminPanel" class="admin-panel hidden">
-
-    <h2 id="formTitle">
-
-        إضافة منتج جديد
-
-    </h2>
-
-    <input
-        type="hidden"
-        id="editId">
-
-    <div class="form-group">
-
-        <label>الماركة</label>
-
-        <input
-            type="text"
-            id="brand"
-            placeholder="Samsung">
-
-    </div>
-
-    <div class="form-group">
-
-        <label>الموديل</label>
-
-        <input
-            type="text"
-            id="model"
-            placeholder="Galaxy S25 Ultra">
-
-    </div>    <div class="form-group">
-
-        <label>الوصف</label>
-
-        <textarea
-            id="desc"
-            rows="5"
-            placeholder="اكتب مواصفات الهاتف..."></textarea>
-
-    </div>
-
-    <div class="form-group">
-
-        <label>السعر</label>
-
-        <input
-            type="number"
-            id="price"
-            placeholder="25000">
-
-    </div>
-
-    <div class="form-group">
-
-        <label>رابط الصورة</label>
-
-        <input
-            type="text"
-            id="imgUrl"
-            placeholder="https://">
-
-    </div>
-
-    <div class="preview">
-
-        <img
-            id="previewImage"
-            src="https://via.placeholder.com/250x250?text=Preview"
-            alt="Preview">
-
-    </div>
-
-    <div class="buttons">
-
-        <button id="saveBtn" class="save-btn">
-
-            <i class="fa-solid fa-floppy-disk"></i>
-
-            حفظ المنتج
-
-        </button>
-
-        <button id="cancelBtn" class="cancel-btn">
-
-            <i class="fa-solid fa-xmark"></i>
-
-            إلغاء
-
-        </button>
-
-    </div>
-
-</section>
-
-<footer>
-
-    <p>
-
-        © 2026 Shbrawy Group
-
-    </p>
-
-</footer>
-
-<div id="toast"></div><script type="module" src="firebase.js"></script>
-<script type="module" src="script.js"></script>
-
+<header><h1>📱 شبراوي جروب - عالم الموبايلات</h1></header>
+
+<nav class="filter-nav">
+    <button onclick="renderProducts('الكل')">الكل</button>
+    <button onclick="renderProducts('سامسونج')">سامسونج</button>
+    <button onclick="renderProducts('آيفون')">آيفون</button>
+</nav>
+
+<div id="product-list" class="product-grid">جاري تحميل المنتجات...</div>
+
+<div class="admin-section" id="admin-panel">
+    <h3 id="form-title">إضافة أو تعديل منتج</h3>
+    <input type="hidden" id="edit-id">
+    <input type="text" id="brand" placeholder="الماركة">
+    <input type="text" id="model" placeholder="الموديل">
+    <textarea id="desc" placeholder="المواصفات"></textarea>
+    <input type="number" id="price" placeholder="السعر">
+    <input type="text" id="imgUrl" placeholder="رابط الصورة">
+    <button class="btn-action" onclick="saveProduct()">💾 حفظ المنتج</button>
+</div>
+
+<div style="text-align: center; margin-top: 20px;">
+    <button onclick="checkAdmin()">🔐 دخول المدير</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc, deleteDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const db = getFirestore(initializeApp({
+        apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
+        projectId: "shbrawy-shop"
+    }));
+
+    let allProducts = [];
+
+    async function fetchProducts() {
+        const snapshot = await getDocs(collection(db, "products"));
+        allProducts = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+        renderProducts('الكل');
+    }
+
+    window.renderProducts = (cat) => {
+        const list = document.getElementById("product-list");
+        const filtered = cat === 'الكل' ? allProducts : allProducts.filter(p => p.brand === cat);
+        list.innerHTML = filtered.map(p => `
+            <div class="card">
+                <img src="${p.imgUrl || 'https://via.placeholder.com/200'}" alt="صورة">
+                <h3>${p.brand} - ${p.model}</h3>
+                <p>${p.desc}</p>
+                <div class="price">${p.price} جنيه</div>
+                <button class="btn-edit" onclick="editProduct('${p.id}')">تعديل</button>
+                <button onclick="deleteProduct('${p.id}')" style="background:var(--danger); color:white; border:none; padding:5px 10px;">حذف</button>
+            </div>
+        `).join('');
+    }
+
+    window.editProduct = (id) => {
+        const p = allProducts.find(item => item.id === id);
+        document.getElementById('edit-id').value = p.id;
+        document.getElementById('brand').value = p.brand;
+        document.getElementById('model').value = p.model;
+        document.getElementById('desc').value = p.desc;
+        document.getElementById('price').value = p.price;
+        document.getElementById('imgUrl').value = p.imgUrl;
+        document.getElementById('form-title').innerText = "تعديل المنتج";
+        document.getElementById('admin-panel').style.display = 'block';
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    window.saveProduct = async () => {
+        const id = document.getElementById('edit-id').value;
+        const data = {
+            brand: document.getElementById('brand').value,
+            model: document.getElementById('model').value,
+            desc: document.getElementById('desc').value,
+            price: document.getElementById('price').value,
+            imgUrl: document.getElementById('imgUrl').value
+        };
+
+        if(id) {
+            await updateDoc(doc(db, "products", id), data);
+            alert("تم تحديث البيانات!");
+        } else {
+            await addDoc(collection(db, "products"), data);
+            alert("تم إضافة منتج جديد!");
+        }
+        location.reload();
+    }
+
+    window.deleteProduct = async (id) => {
+        if(confirm("هل أنت متأكد من حذف هذا المنتج؟")) {
+            await deleteDoc(doc(db, "products", id));
+            fetchProducts();
+        }
+    }
+
+    window.checkAdmin = () => {
+        if(prompt("كلمة المرور:") === "1234") document.getElementById('admin-panel').style.display = 'block';
+    }
+
+    fetchProducts();
+</script>
 </body>
 </html>
