@@ -44,6 +44,9 @@
 
 <div style="text-align: center; margin-top: 20px;">
     <button onclick="checkAdmin()">🔐 دخول المدير</button>
+    <button id="logout-btn" onclick="logoutAdmin()" style="display:none;">
+        🚪 خروج المدير
+    </button>
 </div>
 
 <script type="module">
@@ -143,7 +146,9 @@ await fetchProducts();    }
         isAdmin = true;
 
         document.getElementById('admin-panel').style.display = 'block';
-
+        
+document.getElementById('logout-btn').style.display = 'inline-block';
+        
         renderProducts('الكل');
 
     } else {
@@ -152,7 +157,17 @@ await fetchProducts();    }
 
     }
     }
+window.logoutAdmin = () => {
 
+    isAdmin = false;
+
+    document.getElementById('admin-panel').style.display = 'none';
+
+    document.getElementById('logout-btn').style.display = 'none';
+
+    renderProducts('الكل');
+
+}
     fetchProducts();
 </script>
 </body>
