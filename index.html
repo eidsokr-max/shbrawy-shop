@@ -3,94 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>شبراوي جروب - متجر الأجهزة</title>
+    <title>شبراوي جروب - متجر متكامل</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; padding: 20px; }
-        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
-        .card { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; }
-        .card img { width: 100%; height: 180px; object-fit: cover; border-radius: 10px; }
-        .card h3 { margin: 10px 0; color: #333; }
-        .price { color: #28a745; font-weight: bold; font-size: 1.2rem; }
-        .admin-btn { background: #007bff; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; margin-top: 20px; }
-        #admin-panel { display: none; background: #fff3cd; padding: 20px; border-radius: 10px; margin-top: 20px; border: 1px solid #ffeeba; }
-        input { width: 90%; padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 5px; }
-        button { background: #28a745; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; }
+        :root { --primary: #007bff; --danger: #dc3545; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        header { text-align: center; padding: 20px; }
+        .filter-nav { text-align: center; margin-bottom: 20px; }
+        .filter-nav button { margin: 5px; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; background: #ddd; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        .card img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; }
+        .admin-section { background: white; padding: 30px; border-radius: 15px; margin-top: 50px; border: 2px dashed #007bff; }
+        input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .btn-action { background: var(--primary); color: white; border: none; padding: 12px 25px; cursor: pointer; border-radius: 5px; width: 100%; }
     </style>
 </head>
 <body>
 
-    <h1 style="text-align: center;">شبراوي جروب - أحدث العروض</h1>
-    
-    <div id="product-list" class="product-grid">جاري تحميل المنتجات...</div>
-    
-    <div style="text-align: center;">
-        <button class="admin-btn" onclick="openAdmin()">إدارة المتجر</button>
-    </div>
+<header>
+    <h1>شبراوي جروب - عالم الموبايلات</h1>
+</header>
 
-    <div id="admin-panel">
-        <h3>لوحة تحكم المدير</h3>
-        <input type="text" id="brand" placeholder="الماركة (مثال: Samsung)">
-        <input type="text" id="model" placeholder="الموديل (مثال: A34)">
-        <input type="number" id="price" placeholder="السعر (مثال: 5500)">
-        <input type="text" id="imgUrl" placeholder="رابط صورة المنتج">
-        <br><br>
-        <button onclick="addProduct()">إضافة المنتج للموقع</button>
-    </div>
+<nav class="filter-nav">
+    <button onclick="renderProducts('الكل')">الكل</button>
+    <button onclick="renderProducts('سامسونج')">سامسونج</button>
+    <button onclick="renderProducts('آيفون')">آيفون</button>
+</nav>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+<div id="product-list" class="product-grid">جاري تحميل المنتجات...</div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
-            authDomain: "shbrawy-shop.firebaseapp.com",
-            projectId: "shbrawy-shop",
-            storageBucket: "shbrawy-shop.firebasestorage.app",
-            messagingSenderId: "619982205483",
-            appId: "1:619982205483:web:cab9426ce2888220ef306e"
-        };
-        const db = getFirestore(initializeApp(firebaseConfig));
+<div class="admin-section" id="admin-panel" style="display:none;">
+    <h3>لوحة التحكم الاحترافية</h3>
+    <input type="text" id="brand" placeholder="الماركة">
+    <input type="text" id="model" placeholder="الموديل">
+    <textarea id="desc" placeholder="المواصفات"></textarea>
+    <input type="number" id="price" placeholder="السعر">
+    <input type="text" id="imgUrl" placeholder="رابط الصورة">
+    <button class="btn-action" onclick="addProduct()">نشر المنتج</button>
+</div>
 
-        window.openAdmin = () => {
-            const pass = prompt("كلمة المرور:");
-            if(pass === "1234") document.getElementById('admin-panel').style.display = 'block';
-            else alert("كلمة المرور غير صحيحة!");
+<div style="text-align: center; margin-top: 20px;">
+    <button onclick="checkAdmin()">دخول المدير</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const db = getFirestore(initializeApp({
+        apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
+        projectId: "shbrawy-shop"
+    }));
+
+    let allProducts = [];
+
+    async function fetchProducts() {
+        const snapshot = await getDocs(collection(db, "products"));
+        allProducts = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+        renderProducts('الكل');
+    }
+
+    window.renderProducts = (cat) => {
+        const list = document.getElementById("product-list");
+        const filtered = cat === 'الكل' ? allProducts : allProducts.filter(p => p.brand === cat);
+        list.innerHTML = filtered.map(p => `
+            <div class="card">
+                <img src="${p.imgUrl || 'https://via.placeholder.com/200'}" alt="صورة">
+                <h3>${p.brand} - ${p.model}</h3>
+                <p>${p.desc}</p>
+                <div class="price">${p.price} جنيه</div>
+                <button onclick="deleteProduct('${p.id}')" style="background:var(--danger); color:white; border:none; padding:5px 10px;">حذف</button>
+            </div>
+        `).join('');
+    }
+
+    window.addProduct = async () => {
+        await addDoc(collection(db, "products"), {
+            brand: document.getElementById('brand').value,
+            model: document.getElementById('model').value,
+            desc: document.getElementById('desc').value,
+            price: document.getElementById('price').value,
+            imgUrl: document.getElementById('imgUrl').value
+        });
+        alert("تم الإضافة!");
+        fetchProducts();
+    }
+
+    window.deleteProduct = async (id) => {
+        if(confirm("حذف المنتج؟")) {
+            await deleteDoc(doc(db, "products", id));
+            fetchProducts();
         }
+    }
 
-        async function loadProducts() {
-            const list = document.getElementById("product-list");
-            const snapshot = await getDocs(collection(db, "products"));
-            list.innerHTML = "";
-            snapshot.forEach((doc) => {
-                const p = doc.data();
-                list.innerHTML += `
-                    <div class="card">
-                        <img src="${p.imgUrl || 'https://via.placeholder.com/200'}" alt="صورة">
-                        <h3>${p.brand} - ${p.model}</h3>
-                        <p class="price">${p.price} جنيه</p>
-                        <button style="background:#dc3545;" onclick="deleteProduct('${doc.id}')">حذف</button>
-                    </div>`;
-            });
-        }
+    window.checkAdmin = () => {
+        if(prompt("كلمة المرور:") === "1234") document.getElementById('admin-panel').style.display = 'block';
+    }
 
-        window.addProduct = async () => {
-            await addDoc(collection(db, "products"), {
-                brand: document.getElementById('brand').value,
-                model: document.getElementById('model').value,
-                price: document.getElementById('price').value,
-                imgUrl: document.getElementById('imgUrl').value
-            });
-            alert("تمت الإضافة!");
-            loadProducts();
-        }
+    fetchProducts();
+</script>
 
-        window.deleteProduct = async (id) => {
-            if(confirm("حذف المنتج؟")) {
-                await deleteDoc(doc(db, "products", id));
-                loadProducts();
-            }
-        }
-        loadProducts();
-    </script>
 </body>
 </html>
