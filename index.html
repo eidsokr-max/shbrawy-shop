@@ -48,9 +48,9 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, addDoc, deleteDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, addDoc, deleteDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-    const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
   authDomain: "shbrawy-shop.firebaseapp.com",
   projectId: "shbrawy-shop",
@@ -58,11 +58,12 @@
   messagingSenderId: "619982205483",
   appId: "1:619982205483:web:cab9426ce2888220ef306e",
   measurementId: "G-VEWYWQM3XF"
-      };
-        const app = initializeApp(firebaseConfig);
+};
+
+const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-    let allProducts = [];
+let allProducts = [];
 
     async function fetchProducts() {
         const snapshot = await getDocs(collection(db, "products"));
