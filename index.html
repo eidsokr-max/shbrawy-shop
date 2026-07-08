@@ -50,10 +50,15 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import { getFirestore, collection, getDocs, addDoc, deleteDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-    const db = getFirestore(initializeApp({
-        apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
-        projectId: "shbrawy-shop"
-    }));
+    const firebaseConfig = {
+  apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
+  authDomain: "shbrawy-shop.firebaseapp.com",
+  projectId: "shbrawy-shop",
+  storageBucket: "shbrawy-shop.firebasestorage.app",
+  messagingSenderId: "619982205483",
+  appId: "1:619982205483:web:cab9426ce2888220ef306e",
+  measurementId: "G-VEWYWQM3XF"
+};
 
     let allProducts = [];
 
