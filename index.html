@@ -2,14 +2,26 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>شبراوي جروب</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; text-align: center; padding: 20px; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; padding: 20px; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .del-btn { background: #ff4d4d; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; margin-top: 10px; }
+        #admin-panel { display: none; background: #fff3cd; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        input { padding: 8px; margin: 5px; }
+    </style>
 </head>
 <body>
     <h1>شبراوي جروب - أحدث الأجهزة</h1>
-    <div id="product-list">جاري التحميل...</div>
+    <div id="product-list" class="product-grid">جاري التحميل...</div>
+    
     <hr>
-    <button onclick="checkAdmin()">إدارة المتجر</button>
-    <div id="admin-panel" style="display:none;">
+    <button onclick="document.getElementById('admin-panel').style.display = 'block'">إدارة المتجر</button>
+    
+    <div id="admin-panel">
+        <h3>إضافة جهاز جديد</h3>
         <input type="text" id="brand" placeholder="الماركة">
         <input type="text" id="model" placeholder="الموديل">
         <input type="text" id="price" placeholder="السعر">
@@ -18,9 +30,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-        // تأكد أن هذه البيانات مطابقة تماماً لما في Firebase Console
         const firebaseConfig = {
             apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
             authDomain: "shbrawy-shop.firebaseapp.com",
@@ -33,23 +44,39 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // تحميل المنتجات
         async function loadProducts() {
             const list = document.getElementById("product-list");
             const querySnapshot = await getDocs(collection(db, "products"));
             list.innerHTML = "";
             querySnapshot.forEach((doc) => {
                 const p = doc.data();
-                list.innerHTML += `<div><h3>${p.brand}</h3><p>الموديل: ${p.model} - السعر: ${p.price}</p></div>`;
+                list.innerHTML += `
+                    <div class="card">
+                        <h3>${p.brand}</h3>
+                        <p>الموديل: ${p.model}</p>
+                        <p>السعر: ${p.price} جنيه</p>
+                        <button class="del-btn" onclick="deleteProduct('${doc.id}')">حذف</button>
+                    </div>`;
             });
         }
 
-        window.checkAdmin = () => { document.getElementById("admin-panel").style.display = "block"; }
+        // حذف منتج
+        window.deleteProduct = async (id) => {
+            if(confirm("هل أنت متأكد؟")) {
+                await deleteDoc(doc(db, "products", id));
+                loadProducts();
+            }
+        }
+
+        // إضافة منتج
         window.addProduct = async () => {
             await addDoc(collection(db, "products"), {
                 brand: document.getElementById('brand').value,
                 model: document.getElementById('model').value,
                 price: document.getElementById('price').value
             });
+            alert("تمت الإضافة!");
             loadProducts();
         }
         loadProducts();
