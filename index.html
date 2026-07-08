@@ -24,6 +24,10 @@
 
 .card:hover {
     transform: scale(0.95);
+    .card.active {
+    transform: translateX(100px) scale(1.15);
+    z-index: 10;
+
 }
         .card img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; }
         .admin-section { background: white; padding: 30px; border-radius: 15px; margin-top: 50px; border: 2px dashed var(--primary); display: none; }
@@ -190,6 +194,10 @@ localStorage.removeItem("admin");
     document.getElementById('logout-btn').style.display = 'inline-block';
 }
     
+window.openProduct = (id, card) => {
 
+    card.classList.toggle("active");
+
+}
 fetchProducts();
    </script>
