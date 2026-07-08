@@ -15,24 +15,46 @@
     flex-wrap: wrap;
     gap: 20px;
 }
-        .card { 
-    background: white; 
-    padding: 20px; 
-    border-radius: 15px; 
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-    text-align: center;
-
-    transition: 0.3s;
+        .card {
+    background: transparent;
+    padding: 0;
+    height: 380px;
+    perspective: 1000px;
     cursor: pointer;
 }
 
-.card:hover {
-    transform: scale(0.95);
-   .card.active {
-    transform: translateX(120px) scale(1.15);
-    z-index: 10;
+
+.card-inner {
     position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.7s;
+    transform-style: preserve-3d;
 }
+
+
+.card.active .card-inner {
+    transform: rotateY(180deg);
+}
+
+
+.card-front,
+.card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    backface-visibility: hidden;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+
+.card-back {
+    transform: rotateY(180deg);
+
 
 }
         .card img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; }
@@ -101,19 +123,51 @@ let isAdmin = localStorage.getItem("admin") === "true";
     window.renderProducts = (cat) => {
         const list = document.getElementById("product-list");
         const filtered = cat === 'الكل' ? allProducts : allProducts.filter(p => p.brand === cat);
-      list.innerHTML = filtered.map(p => `
-    <div class="card" onclick="openProduct('${p.id}', this)">
-        <img src="${p.imgUrl || 'https://via.placeholder.com/200'}" alt="صورة">
-                <h3>${p.brand} - ${p.model}</h3>
-                <p>${p.desc}</p>
-                <div class="price">${p.price} جنيه</div>
+     list.innerHTML = filtered.map(p => `
+<div class="card" onclick="openProduct('${p.id}', this)">
 
-${isAdmin ? `
-<button class="btn-edit" onclick="editProduct('${p.id}')">تعديل</button>
-<button onclick="deleteProduct('${p.id}')" style="background:var(--danger); color:white; border:none; padding:5px 10px;">حذف</button>
-` : ''}
+    <div class="card-inner">
+
+        <div class="card-front">
+
+            <img src="${p.imgUrl || 'https://via.placeholder.com/200'}" alt="صورة">
+
+            <h3>${p.brand} - ${p.model}</h3>
+
+            <div class="price">${p.price} جنيه</div>
+
+        </div>
+
+
+        <div class="card-back">
+
+            <h3>${p.brand} - ${p.model}</h3>
+
+            <p>${p.desc}</p>
+
+            <div class="price">
+                ${p.price} جنيه
             </div>
-        `).join('');
+
+
+            ${isAdmin ? `
+            <button class="btn-edit" onclick="event.stopPropagation(); editProduct('${p.id}')">
+                تعديل
+            </button>
+
+            <button onclick="event.stopPropagation(); deleteProduct('${p.id}')"
+            style="background:var(--danger); color:white; border:none; padding:5px 10px;">
+                حذف
+            </button>
+            ` : ''}
+
+
+        </div>
+
+    </div>
+
+</div>
+`).join('');
     }
 
     window.editProduct = (id) => {
