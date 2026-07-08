@@ -58,6 +58,9 @@
   messagingSenderId: "619982205483",
   appId: "1:619982205483:web:cab9426ce2888220ef306e",
   measurementId: "G-VEWYWQM3XF"
+      };
+        const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 };
 
     let allProducts = [];
@@ -113,8 +116,16 @@
             await addDoc(collection(db, "products"), data);
             alert("تم إضافة منتج جديد!");
         }
-        location.reload();
-    }
+document.getElementById('edit-id').value = "";
+document.getElementById('brand').value = "";
+document.getElementById('model').value = "";
+document.getElementById('desc').value = "";
+document.getElementById('price').value = "";
+document.getElementById('imgUrl').value = "";
+
+document.getElementById('admin-panel').style.display = "none";
+
+await fetchProducts();    }
 
     window.deleteProduct = async (id) => {
         if(confirm("هل أنت متأكد من حذف هذا المنتج؟")) {
