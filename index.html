@@ -2,12 +2,17 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>شبراوي جروب - أحدث الأجهزة</title>
     <style>
-        body { font-family: sans-serif; background: #f4f4f9; text-align: center; padding: 20px; }
-        .card { background: white; padding: 15px; margin: 10px; border-radius: 8px; display: inline-block; width: 200px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        #admin-panel { display: none; background: #eee; padding: 20px; margin-top: 20px; border-radius: 8px; }
-        .cat-btn { padding: 10px; margin: 5px; cursor: pointer; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f4f9; text-align: center; padding: 20px; }
+        .card { background: white; padding: 20px; margin: 10px; border-radius: 12px; display: inline-block; width: 220px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .card:hover { transform: scale(1.05); }
+        #admin-panel { display: none; background: #fff3cd; padding: 25px; margin-top: 30px; border-radius: 12px; border: 2px dashed #ffc107; }
+        .cat-btn { padding: 10px 20px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; background: #333; color: white; }
+        .cat-btn:hover { background: #555; }
+        input { padding: 8px; margin: 5px; border-radius: 4px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -20,13 +25,14 @@
 
 <div id="product-list">جاري التحميل...</div>
 
-<hr>
+<hr style="margin: 40px 0;">
 <button onclick="checkAdmin()">دخول لوحة التحكم</button>
+
 <div id="admin-panel">
     <h3>إضافة جهاز جديد</h3>
-    <input type="text" id="brand" placeholder="الماركة (Samsung)"><br>
-    <input type="text" id="model" placeholder="الموديل (A34)"><br>
-    <input type="text" id="price" placeholder="السعر (5500)"><br>
+    <input type="text" id="brand" placeholder="الماركة (Samsung)">
+    <input type="text" id="model" placeholder="الموديل (A34)">
+    <input type="text" id="price" placeholder="السعر (5500)">
     <button onclick="addProduct()">حفظ الجهاز</button>
 </div>
 
@@ -34,7 +40,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-    // ** حط بيانات الـ Config اللي نسختها من الـ Settings هنا **
+    // ** حط بيانات الـ Config الخاصة بك هنا **
     const firebaseConfig = {
       apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
       authDomain: "shbrawy-shop.firebaseapp.com",
@@ -57,14 +63,19 @@
     }
 
     function renderProducts(list) {
-        document.getElementById("product-list").innerHTML = list.map(p => 
-            `<div class="card"><h3>${p.brand}</h3><p>${p.model}</p><p>${p.price} جنيه</p></div>`
-        ).join('');
+        document.getElementById("product-list").innerHTML = list.length > 0 ? list.map(p => 
+            `<div class="card">
+                <h3>${p.brand}</h3>
+                <p><strong>الموديل:</strong> ${p.model}</p>
+                <p><strong>السعر:</strong> ${p.price} جنيه</p>
+            </div>`
+        ).join('') : "<p>لا توجد أجهزة حالياً</p>";
     }
 
     function renderCategories() {
         const brands = [...new Set(allProducts.map(p => p.brand))];
         const container = document.getElementById("categories");
+        container.innerHTML = `<button class="cat-btn" onclick="filterProducts('all')">الكل</button>`;
         brands.forEach(b => {
             container.innerHTML += `<button class="cat-btn" onclick="filterProducts('${b}')">${b}</button>`;
         });
@@ -76,7 +87,7 @@
     }
 
     window.checkAdmin = () => {
-        const pass = prompt("كلمة مرور المدير:");
+        const pass = prompt("أدخل كلمة مرور المدير:");
         if(pass === "1234") document.getElementById("admin-panel").style.display = "block";
     }
 
@@ -86,7 +97,10 @@
             model: document.getElementById('model').value,
             price: document.getElementById('price').value
         });
-        alert("تم الحفظ!");
+        alert("تم الحفظ بنجاح!");
+        document.getElementById('brand').value = '';
+        document.getElementById('model').value = '';
+        document.getElementById('price').value = '';
         loadProducts();
     }
 
