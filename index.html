@@ -2,22 +2,16 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>شبراوي جروب - متجر الأجهزة</title>
+    <title>شبراوي جروب</title>
     <style>
-        :root { --bg: #f4f4f9; --text: #333; --card: #fff; }
-        .dark-mode { --bg: #1a1a1a; --text: #f4f4f9; --card: #333; }
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); padding: 20px; transition: 0.3s; }
-        .card { background: var(--card); padding: 20px; margin: 10px; border-radius: 12px; display: inline-block; width: 200px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        #admin-panel { display: none; background: #fff3cd; padding: 20px; margin-top: 20px; border-radius: 8px; color: #000; }
-        .cat-btn { padding: 10px; margin: 5px; cursor: pointer; border-radius: 5px; border: none; background: #6200ea; color: white; }
+        body { font-family: sans-serif; background: #f4f4f9; text-align: center; padding: 20px; }
+        .card { background: white; padding: 20px; margin: 10px; border-radius: 12px; display: inline-block; width: 200px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #admin-panel { display: none; background: #fff3cd; padding: 20px; margin-top: 20px; border-radius: 8px; }
     </style>
 </head>
 <body>
 
-<h1>شبراوي جروب</h1>
-<button onclick="document.body.classList.toggle('dark-mode')">الوضع الليلي/الفاتح</button>
-
-<div id="categories"><button class="cat-btn" onclick="filterProducts('all')">الكل</button></div>
+<h1>شبراوي جروب - أحدث الأجهزة</h1>
 <div id="product-list">جاري التحميل...</div>
 
 <hr>
@@ -32,43 +26,45 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-    const firebaseConfig = { /* (نفس بياناتك السابقة) */ };
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
+      authDomain: "shbrawy-shop.firebaseapp.com",
+      projectId: "shbrawy-shop",
+      storageBucket: "shbrawy-shop.firebasestorage.app",
+      messagingSenderId: "619982205483",
+      appId: "1:619982205483:web:cab9426ce2888220ef306e"
+    };
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    let allProducts = [];
 
-    // دالة الإضافة مع شرط التأكد
+    async function loadProducts() {
+        const querySnapshot = await getDocs(collection(db, "products"));
+        const list = document.getElementById("product-list");
+        list.innerHTML = "";
+        querySnapshot.forEach((doc) => { 
+            const p = doc.data();
+            // هنا الكود سيعرض البيانات الموجودة في Firebase
+            list.innerHTML += `<div class="card"><h3>${p.brand}</h3><p>الموديل: ${p.model}</p><p>السعر: ${p.price} جنيه</p></div>`;
+        });
+    }
+
+    window.checkAdmin = () => {
+        const pass = prompt("كلمة المرور:");
+        if(pass === "1234") document.getElementById("admin-panel").style.display = "block";
+    }
+
     window.addProduct = async () => {
-        const brand = document.getElementById('brand').value;
-        const model = document.getElementById('model').value;
-        const price = document.getElementById('price').value;
-
-        if(!brand || !model || !price) {
-            alert("يرجى ملء جميع البيانات!");
-            return;
-        }
-
+        const brand = document.getElementById('brand').value.trim();
+        const model = document.getElementById('model').value.trim();
+        const price = document.getElementById('price').value.trim();
+        if(!brand || !model || !price) return alert("يرجى ملء البيانات!");
         await addDoc(collection(db, "products"), { brand, model, price });
         alert("تمت الإضافة!");
         loadProducts();
     }
-
-    async function loadProducts() {
-        const querySnapshot = await getDocs(collection(db, "products"));
-        allProducts = [];
-        querySnapshot.forEach((doc) => { 
-            // فلترة أي بيانات فاضية أثناء التحميل
-            if(doc.data().brand) allProducts.push({id: doc.id, ...doc.data()}); 
-        });
-        renderProducts(allProducts);
-    }
-    
-    // لإضافة زر حذف للمدير مستقبلاً أو يمكنك حذف البيانات يدوياً من Firebase Console
-    // في صفحة Firebase Console، ادخل على Products واحذف المستندات اللي فيها خانات فاضية.
-    
-    // ... (باقي الدوال كما هي)
     loadProducts();
 </script>
 </body>
