@@ -11,14 +11,15 @@
         .filter-nav { text-align: center; margin-bottom: 20px; }
         .filter-nav button { margin: 5px; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; background: #ddd; }
 .product-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
 }
-        .card {
+       .card {
     background: transparent;
     padding: 0;
     height: 380px;
+    width: 280px;
     perspective: 1000px;
     cursor: pointer;
 }
