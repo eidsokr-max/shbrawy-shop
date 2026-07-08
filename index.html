@@ -2,167 +2,221 @@
 <html lang="ar" dir="rtl">
 
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>شبراوي جروب | عالم الموبايلات</title>
+
+    <title>شبراوي جروب | متجر الموبايلات</title>
 
     <link rel="stylesheet" href="style.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
 </head>
 
 <body>
 
-    <!-- Header -->
+<header>
 
-    <header class="header">
+    <div class="logo">
 
-        <h1>📱 شبراوي جروب</h1>
+        <i class="fa-solid fa-mobile-screen-button"></i>
 
-        <p>أفضل أسعار الموبايلات والإكسسوارات</p>
+        <h1>شبراوي جروب</h1>
 
-    </header>
+    </div>
 
+    <div class="header-text">
 
-    <!-- Search -->
+        <h2>عالم الموبايلات والإكسسوارات</h2>
 
-    <section class="top-bar">
+        <p>أفضل الأسعار وأحدث الهواتف</p>
 
-        <input
-            type="text"
-            id="searchInput"
-            placeholder="🔍 ابحث عن أي موبايل..."
-        >
+    </div>
 
-    </section>
+</header>
 
+<section class="top-search">
 
-    <!-- Categories -->
+    <input
+        type="text"
+        id="searchInput"
+        placeholder="🔍 ابحث عن هاتف...">
 
-    <nav class="filter-nav">
+    <select id="brandFilter">
 
-        <button class="active" data-brand="الكل">
-            الكل
-        </button>
+        <option value="الكل">كل الماركات</option>
 
-        <button data-brand="سامسونج">
-            سامسونج
-        </button>
+        <option value="سامسونج">سامسونج</option>
 
-        <button data-brand="آيفون">
-            آيفون
-        </button>
+        <option value="آيفون">آيفون</option>
 
-        <button data-brand="شاومي">
-            شاومي
-        </button>
+        <option value="أوبو">أوبو</option>
 
-        <button data-brand="أوبو">
-            أوبو
-        </button>
+        <option value="ريلمي">ريلمي</option>
 
-        <button data-brand="ريلمي">
-            ريلمي
-        </button>
+        <option value="ريدمي">ريدمي</option>
 
-        <button data-brand="فيفو">
-            فيفو
-        </button>
+        <option value="فيفو">فيفو</option>
 
-    </nav>
+    </select>
 
+</section><section class="toolbar">
 
-    <!-- Products -->
-
-    <main>
-
-        <div id="product-list" class="product-grid">
-
-            جاري تحميل المنتجات...
-
-        </div>
-
-    </main>
-
-
-
-    <!-- Floating Admin Button -->
-
-    <button id="adminBtn" class="floating-btn">
-
-        ⚙️
-
+    <button id="sortLow">
+        <i class="fa-solid fa-arrow-down-1-9"></i>
+        السعر من الأقل
     </button>
 
+    <button id="sortHigh">
+        <i class="fa-solid fa-arrow-down-9-1"></i>
+        السعر من الأعلى
+    </button>
 
+    <button id="refreshProducts">
+        <i class="fa-solid fa-rotate"></i>
+        تحديث
+    </button>
 
-    <!-- Admin Panel -->
+    <button id="loginBtn" class="admin-btn">
+        <i class="fa-solid fa-user-shield"></i>
+        دخول المدير
+    </button>
 
-    <div id="adminModal" class="modal">
+</section>
 
-        <div class="modal-content">
+<main>
 
-            <span class="close">&times;</span>
+    <div id="product-list" class="product-grid">
 
-            <h2 id="form-title">
+        <div class="loading">
 
-                إضافة منتج جديد
+            <i class="fa-solid fa-spinner fa-spin"></i>
 
-            </h2>
-
-            <input
-                type="hidden"
-                id="edit-id"
-            >
-
-            <input
-                type="text"
-                id="brand"
-                placeholder="الماركة"
-            >
-
-            <input
-                type="text"
-                id="model"
-                placeholder="الموديل"
-            >
-
-            <textarea
-                id="desc"
-                placeholder="الوصف"
-            ></textarea>
-
-            <input
-                type="number"
-                id="price"
-                placeholder="السعر"
-            >
-
-            <input
-                type="text"
-                id="imgUrl"
-                placeholder="رابط الصورة"
-            >
-
-            <button id="saveBtn">
-
-                💾 حفظ المنتج
-
-            </button>
+            <p>جاري تحميل المنتجات...</p>
 
         </div>
 
     </div>
 
+</main>
 
+<section id="adminPanel" class="admin-panel hidden">
 
-    <!-- Toast -->
+    <h2 id="formTitle">
 
-    <div id="toast"></div>
+        إضافة منتج جديد
 
+    </h2>
 
-    <!-- Firebase -->
+    <input
+        type="hidden"
+        id="editId">
 
-    <script type="module" src="script.js"></script>
+    <div class="form-group">
+
+        <label>الماركة</label>
+
+        <input
+            type="text"
+            id="brand"
+            placeholder="Samsung">
+
+    </div>
+
+    <div class="form-group">
+
+        <label>الموديل</label>
+
+        <input
+            type="text"
+            id="model"
+            placeholder="Galaxy S25 Ultra">
+
+    </div>    <div class="form-group">
+
+        <label>الوصف</label>
+
+        <textarea
+            id="desc"
+            rows="5"
+            placeholder="اكتب مواصفات الهاتف..."></textarea>
+
+    </div>
+
+    <div class="form-group">
+
+        <label>السعر</label>
+
+        <input
+            type="number"
+            id="price"
+            placeholder="25000">
+
+    </div>
+
+    <div class="form-group">
+
+        <label>رابط الصورة</label>
+
+        <input
+            type="text"
+            id="imgUrl"
+            placeholder="https://">
+
+    </div>
+
+    <div class="preview">
+
+        <img
+            id="previewImage"
+            src="https://via.placeholder.com/250x250?text=Preview"
+            alt="Preview">
+
+    </div>
+
+    <div class="buttons">
+
+        <button id="saveBtn" class="save-btn">
+
+            <i class="fa-solid fa-floppy-disk"></i>
+
+            حفظ المنتج
+
+        </button>
+
+        <button id="cancelBtn" class="cancel-btn">
+
+            <i class="fa-solid fa-xmark"></i>
+
+            إلغاء
+
+        </button>
+
+    </div>
+
+</section>
+
+<footer>
+
+    <p>
+
+        © 2026 Shbrawy Group
+
+    </p>
+
+</footer>
+
+<div id="toast"></div><script type="module" src="firebase.js"></script>
+<script type="module" src="script.js"></script>
 
 </body>
-
 </html>
