@@ -1,103 +1,324 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title> Eldmrdash Store - المتجر المتكامل</title>
-    <style>
-        :root { --primary: #007bff; --danger: #dc3545; --warning: #ffc107; --bg: #8e44ad; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        header { text-align: center; padding: 20px; }
-        .filter-nav { text-align: center; margin-bottom: 20px; }
-        .filter-nav button { margin: 5px; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; background: #ddd; }
-.product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-}
-       .card {
-    background: transparent;
-    padding: 0;
-    height: 380px;
-    width: 280px;
-    perspective: 1000px;
-    cursor: pointer;
-}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M.G.STORE — عالم الموبايلات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e17;
+    --bg-elevated:#0d1220;
+    --surface:#131a2b;
+    --surface-2:#1b2438;
+    --border:#232c42;
+    --accent:#00e5c7;
+    --accent-dim:#00e5c722;
+    --accent-2:#ffb020;
+    --danger:#ff4569;
+    --text:#eef1f8;
+    --text-muted:#8b93a8;
+    --text-dim:#565f78;
+    --radius:18px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 500px at 15% -10%, #0f2a2a 0%, transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, #1a1030 0%, transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Tajawal', sans-serif;
+    min-height:100vh;
+    padding-bottom:80px;
+  }
+  ::selection{ background:var(--accent); color:#02110f; }
 
+  /* ---------- Header ---------- */
+  header.top{
+    display:flex; align-items:center; justify-content:center; gap:14px;
+    padding:34px 20px 10px;
+    text-align:center;
+  }
+  .logo-mark{
+    width:52px; height:52px; border-radius:14px;
+    background:linear-gradient(155deg, var(--accent), #00998a);
+    display:flex; align-items:center; justify-content:center;
+    font-size:26px;
+    box-shadow:0 0 30px var(--accent-dim), inset 0 0 0 1px #ffffff33;
+    flex-shrink:0;
+  }
+  .brand-text h1{
+    font-family:'Cairo', sans-serif; font-weight:800;
+    font-size:26px; margin:0; letter-spacing:.3px;
+  }
+  .brand-text p{
+    margin:2px 0 0; color:var(--text-muted); font-size:13px;
+  }
 
-.card-inner {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    transition: transform 0.7s;
-    transform-style: preserve-3d;
-}
+  /* ---------- Toolbar ---------- */
+  .toolbar{
+    max-width:1100px; margin:26px auto 8px; padding:0 20px;
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .search-wrap{ position:relative; }
+  .search-wrap input{
+    width:100%; padding:14px 46px 14px 16px; border-radius:14px;
+    border:1px solid var(--border); background:var(--surface);
+    color:var(--text); font-family:'Tajawal',sans-serif; font-size:15px;
+    outline:none; transition:border-color .2s, box-shadow .2s;
+  }
+  .search-wrap input:focus{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
+  .search-wrap svg{ position:absolute; top:50%; right:16px; transform:translateY(-50%); opacity:.5; }
 
+  .filter-nav{ display:flex; gap:8px; overflow-x:auto; padding:2px 2px 6px; scrollbar-width:thin; }
+  .filter-nav::-webkit-scrollbar{ height:5px; }
+  .filter-nav::-webkit-scrollbar-thumb{ background:var(--border); border-radius:10px; }
+  .pill{
+    flex-shrink:0; border:1px solid var(--border); background:var(--surface);
+    color:var(--text-muted); padding:9px 20px; border-radius:999px; cursor:pointer;
+    font-family:'Tajawal',sans-serif; font-size:14px; font-weight:500;
+    transition:all .18s;
+  }
+  .pill:hover{ border-color:var(--accent); color:var(--text); }
+  .pill.active{
+    background:var(--accent); border-color:var(--accent); color:#02110f; font-weight:700;
+  }
 
-.card.active .card-inner {
-    transform: rotateY(180deg);
-}
+  .result-count{ color:var(--text-dim); font-size:13px; padding:0 4px; }
 
+  /* ---------- Grid ---------- */
+  .product-grid{
+    max-width:1100px; margin:18px auto 0; padding:0 20px;
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:20px;
+  }
 
-.card-front,
-.card-back {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: white;
-    border-radius: 15px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    backface-visibility: hidden;
-    padding: 20px;
-    box-sizing: border-box;
-}
+  /* ---------- Card (signature: phone-frame) ---------- */
+  .card{ height:340px; perspective:1200px; cursor:pointer; }
+  .card-inner{
+    position:relative; width:100%; height:100%;
+    transition:transform .6s cubic-bezier(.4,.2,.2,1); transform-style:preserve-3d;
+  }
+  .card.active .card-inner{ transform:rotateY(180deg); }
+  .card-front,.card-back{
+    position:absolute; inset:0; border-radius:var(--radius);
+    background:var(--surface); border:1px solid var(--border);
+    backface-visibility:hidden; overflow:hidden;
+    display:flex; flex-direction:column;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .card:hover .card-front{ border-color:#00e5c766; box-shadow:0 10px 30px -12px #000, 0 0 0 1px #00e5c722; }
+  .card-back{ transform:rotateY(180deg); padding:18px; }
 
+  .frame-screen{
+    position:relative; margin:14px 14px 0; border-radius:14px 14px 6px 6px;
+    background:#060a12; height:170px; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .frame-screen::before{ /* notch */
+    content:''; position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:60px; height:10px; background:var(--surface); border-radius:0 0 10px 10px; z-index:2;
+  }
+  .frame-screen img{ width:100%; height:100%; object-fit:cover; }
+  .frame-screen .fallback{ font-size:44px; opacity:.25; }
 
-.card-back {
-    transform: rotateY(180deg);
+  .card-body{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:6px; flex:1; }
+  .card-brand{ color:var(--accent); font-size:11px; font-weight:700; letter-spacing:.5px; }
+  .card-model{ font-family:'Cairo',sans-serif; font-weight:700; font-size:16px; margin:0; line-height:1.3; }
+  .card-price{
+    margin-top:auto; font-family:'JetBrains Mono',monospace; font-weight:700;
+    color:var(--text); font-size:17px; display:flex; align-items:baseline; gap:4px;
+  }
+  .card-price small{ font-family:'Tajawal',sans-serif; color:var(--text-muted); font-weight:400; font-size:12px; }
+  .flip-hint{ font-size:11px; color:var(--text-dim); }
 
+  .card-back h3{ font-family:'Cairo',sans-serif; margin:0 0 8px; font-size:16px; }
+  .card-back .spec{ color:var(--text-muted); font-size:13.5px; line-height:1.7; flex:1; overflow-y:auto; }
+  .card-back .price-row{
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:18px; color:var(--accent);
+    padding-top:10px; border-top:1px dashed var(--border); margin-top:8px;
+  }
+  .admin-actions{ display:flex; gap:8px; margin-top:12px; }
+  .admin-actions button{
+    flex:1; border:none; border-radius:10px; padding:9px 0; cursor:pointer;
+    font-family:'Tajawal',sans-serif; font-weight:700; font-size:13px;
+  }
+  .btn-edit-sm{ background:var(--accent-2); color:#231400; }
+  .btn-del-sm{ background:var(--danger); color:#2a0009; }
 
-}
-        .card img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; }
-        .admin-section { background: white; padding: 30px; border-radius: 15px; margin-top: 50px; border: 2px dashed var(--primary); display: none; }
-        input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        .btn-action { background: var(--primary); color: white; border: none; padding: 12px 25px; cursor: pointer; border-radius: 5px; width: 100%; }
-        .btn-edit { background: var(--warning); border: none; padding: 5px 10px; margin: 5px; cursor: pointer; border-radius: 5px; }
-    </style>
+  /* ---------- Empty / loading ---------- */
+  .state-msg{
+    grid-column:1/-1; text-align:center; color:var(--text-muted);
+    padding:60px 20px; display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  .state-msg .icon{ font-size:40px; opacity:.4; }
+  .skeleton{ height:340px; border-radius:var(--radius); background:linear-gradient(100deg, var(--surface) 30%, var(--surface-2) 50%, var(--surface) 70%); background-size:200% 100%; animation:shine 1.4s infinite; border:1px solid var(--border); }
+  @keyframes shine{ from{background-position:200% 0;} to{background-position:-200% 0;} }
+
+  /* ---------- Admin corner + FAB ---------- */
+  .admin-corner{
+    position:fixed; top:16px; left:16px; z-index:40; display:flex; gap:8px;
+  }
+  .icon-btn{
+    width:42px; height:42px; border-radius:12px; border:1px solid var(--border);
+    background:var(--surface); color:var(--text-muted); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:18px;
+    transition:all .18s;
+  }
+  .icon-btn:hover{ border-color:var(--accent); color:var(--accent); }
+  .fab{
+    position:fixed; bottom:24px; left:24px; z-index:40;
+    width:58px; height:58px; border-radius:50%; border:none; cursor:pointer;
+    background:linear-gradient(155deg, var(--accent), #00998a); color:#02110f;
+    font-size:26px; box-shadow:0 8px 24px -6px #00e5c766;
+    display:flex; align-items:center; justify-content:center;
+    transition:transform .18s;
+  }
+  .fab:hover{ transform:scale(1.06); }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:#03050ae0; backdrop-filter:blur(4px);
+    display:none; align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    width:100%; max-width:440px; background:var(--surface); border:1px solid var(--border);
+    border-radius:20px; padding:26px; max-height:88vh; overflow-y:auto;
+  }
+  .modal h3{ font-family:'Cairo',sans-serif; margin:0 0 18px; font-size:19px; }
+  .field label{ display:block; font-size:12.5px; color:var(--text-muted); margin-bottom:6px; }
+  .field{ margin-bottom:14px; }
+  .modal input, .modal textarea{
+    width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border);
+    background:var(--bg-elevated); color:var(--text); font-family:'Tajawal',sans-serif; font-size:14.5px;
+    outline:none; resize:vertical;
+  }
+  .modal input:focus, .modal textarea:focus{ border-color:var(--accent); }
+  .img-preview{
+    width:100%; height:120px; border-radius:10px; background:var(--bg-elevated);
+    border:1px dashed var(--border); display:flex; align-items:center; justify-content:center;
+    overflow:hidden; margin-top:8px; color:var(--text-dim); font-size:13px;
+  }
+  .img-preview img{ width:100%; height:100%; object-fit:cover; }
+  .modal-actions{ display:flex; gap:10px; margin-top:6px; }
+  .btn-primary{
+    flex:2; background:var(--accent); color:#02110f; border:none; border-radius:12px;
+    padding:13px; font-weight:700; cursor:pointer; font-family:'Tajawal',sans-serif; font-size:14.5px;
+  }
+  .btn-ghost{
+    flex:1; background:transparent; color:var(--text-muted); border:1px solid var(--border);
+    border-radius:12px; padding:13px; cursor:pointer; font-family:'Tajawal',sans-serif; font-size:14.5px;
+  }
+
+  /* confirm modal */
+  .confirm-box{ text-align:center; }
+  .confirm-box p{ color:var(--text-muted); margin:0 0 20px; font-size:14.5px; }
+
+  .login-error{
+    display:none; background:#3a0d16; color:#ff8fa3; border:1px solid #6b1b2b;
+    padding:10px 14px; border-radius:10px; font-size:13px; margin-bottom:14px;
+  }
+
+  /* ---------- Toasts ---------- */
+  #toast-stack{ position:fixed; bottom:24px; right:24px; z-index:200; display:flex; flex-direction:column; gap:10px; }
+  .toast{
+    background:var(--surface); border:1px solid var(--border); border-inline-start:4px solid var(--accent);
+    padding:13px 18px; border-radius:12px; font-size:14px; box-shadow:0 10px 30px -10px #000;
+    animation:toast-in .25s ease;
+  }
+  .toast.err{ border-inline-start-color:var(--danger); }
+  @keyframes toast-in{ from{ opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+
+  @media (prefers-reduced-motion: reduce){
+    .card-inner, .fab, .toast{ transition:none; animation:none; }
+  }
+</style>
 </head>
 <body>
 
-<header><h1>📱 M.G.STORE - عالم الموبايلات</h1></header>
-    
-<nav class="filter-nav">
-    <button onclick="renderProducts('الكل')">الكل</button>
-    <button onclick="renderProducts('سامسونج')">سامسونج</button>
-    <button onclick="renderProducts('آيفون')">آيفون</button>
-</nav>
+<header class="top">
+  <div class="logo-mark">📱</div>
+  <div class="brand-text">
+    <h1>M.G.STORE</h1>
+    <p>عالم الموبايلات — أحدث الأجهزة والأسعار</p>
+  </div>
+</header>
 
-<div id="product-list" class="product-grid">جاري تحميل المنتجات...</div>
+<div class="toolbar">
+  <div class="search-wrap">
+    <input id="search-input" type="text" placeholder="ابحث بالماركة أو الموديل...">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+  </div>
+  <div class="filter-nav" id="filter-nav"></div>
+  <div class="result-count" id="result-count"></div>
+</div>
 
-<div class="admin-section" id="admin-panel">
-    <h3 id="form-title">إضافة أو تعديل منتج</h3>
+<div id="product-list" class="product-grid">
+  <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+</div>
+
+<div class="admin-corner">
+  <button class="icon-btn" id="admin-toggle-btn" title="دخول المدير" onclick="handleAdminToggle()">🔐</button>
+</div>
+
+<button class="fab" id="fab-add" style="display:none" onclick="openProductModal()" title="إضافة منتج">＋</button>
+
+<!-- Product Add/Edit Modal -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal">
+    <h3 id="form-title">إضافة منتج جديد</h3>
     <input type="hidden" id="edit-id">
-    <input type="text" id="brand" placeholder="الماركة">
-    <input type="text" id="model" placeholder="الموديل">
-    <textarea id="desc" placeholder="المواصفات"></textarea>
-    <input type="number" id="price" placeholder="السعر">
-    <input type="text" id="imgUrl" placeholder="رابط الصورة">
-    <button class="btn-action" onclick="saveProduct()">💾 حفظ المنتج</button>
+    <div class="field"><label>الماركة</label><input type="text" id="brand" placeholder="مثال: سامسونج"></div>
+    <div class="field"><label>الموديل</label><input type="text" id="model" placeholder="مثال: Galaxy S24"></div>
+    <div class="field"><label>المواصفات</label><textarea id="desc" rows="3" placeholder="الذاكرة، اللون، الحالة..."></textarea></div>
+    <div class="field"><label>السعر (جنيه)</label><input type="number" id="price" placeholder="0"></div>
+    <div class="field">
+      <label>رابط الصورة</label>
+      <input type="text" id="imgUrl" placeholder="https://..." oninput="updateImgPreview()">
+      <div class="img-preview" id="img-preview">لا توجد صورة</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="saveProduct()">💾 حفظ</button>
+      <button class="btn-ghost" onclick="closeProductModal()">إلغاء</button>
+    </div>
+  </div>
 </div>
 
-<div style="text-align: center; margin-top: 20px;">
-    <button onclick="checkAdmin()">🔐 دخول المدير</button>
-    <button id="logout-btn" onclick="logoutAdmin()" style="display:none;">
-        🚪 خروج المدير
-    </button>
+<!-- Confirm Delete Modal -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal confirm-box">
+    <h3>حذف المنتج</h3>
+    <p>هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء.</p>
+    <div class="modal-actions">
+      <button class="btn-primary" style="background:var(--danger); color:#2a0009" id="confirm-delete-btn">حذف نهائيًا</button>
+      <button class="btn-ghost" onclick="closeConfirmModal()">تراجع</button>
+    </div>
+  </div>
 </div>
+
+<!-- Admin Login Modal (Firebase Authentication) -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal">
+    <h3>🔐 دخول المدير</h3>
+    <div class="login-error" id="login-error"></div>
+    <div class="field"><label>البريد الإلكتروني</label><input type="email" id="login-email" placeholder="admin@example.com" autocomplete="username"></div>
+    <div class="field"><label>كلمة المرور</label><input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') submitLogin()"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="login-submit-btn" onclick="submitLogin()">دخول</button>
+      <button class="btn-ghost" onclick="closeLoginModal()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-stack"></div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
 import { getFirestore, collection, getDocs, addDoc, deleteDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
@@ -111,154 +332,255 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 let allProducts = [];
-let isAdmin = localStorage.getItem("admin") === "true";
-    async function fetchProducts() {
-        
-        const snapshot = await getDocs(collection(db, "products"));
-        allProducts = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-        renderProducts('الكل');
-    }
+let currentCategory = 'الكل';
+let searchTerm = '';
+let isAdmin = false;
+let pendingDeleteId = null;
 
-    window.renderProducts = (cat) => {
-        const list = document.getElementById("product-list");
-        const filtered = cat === 'الكل' ? allProducts : allProducts.filter(p => p.brand === cat);
-     list.innerHTML = filtered.map(p => `
-<div class="card" onclick="openProduct('${p.id}', this)">
+const FALLBACK_ICON = `<div class="fallback">📵</div>`;
 
-    <div class="card-inner">
+function toast(msg, type='ok'){
+  const stack = document.getElementById('toast-stack');
+  const el = document.createElement('div');
+  el.className = 'toast' + (type==='err' ? ' err' : '');
+  el.textContent = msg;
+  stack.appendChild(el);
+  setTimeout(()=> el.remove(), 3200);
+}
 
+function formatPrice(p){
+  const n = Number(p);
+  return isNaN(n) ? p : n.toLocaleString('en-US');
+}
+
+async function fetchProducts(){
+  try{
+    const snapshot = await getDocs(collection(db, "products"));
+    allProducts = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+    renderCategories();
+    renderProducts();
+  }catch(e){
+    document.getElementById('product-list').innerHTML =
+      `<div class="state-msg"><div class="icon">⚠️</div><div>تعذر تحميل المنتجات، تحقق من الاتصال</div></div>`;
+  }
+}
+
+function renderCategories(){
+  const nav = document.getElementById('filter-nav');
+  const brands = ['الكل', ...new Set(allProducts.map(p => p.brand).filter(Boolean))];
+  if(!brands.includes(currentCategory)) currentCategory = 'الكل';
+  nav.innerHTML = brands.map(b =>
+    `<button class="pill ${b===currentCategory?'active':''}" onclick="setCategory('${b.replace(/'/g,"\\'")}')">${b}</button>`
+  ).join('');
+}
+
+window.setCategory = (cat) => { currentCategory = cat; renderCategories(); renderProducts(); };
+
+window.renderProducts = () => {
+  const list = document.getElementById('product-list');
+  let filtered = currentCategory === 'الكل' ? allProducts : allProducts.filter(p => p.brand === currentCategory);
+  if(searchTerm.trim()){
+    const q = searchTerm.trim().toLowerCase();
+    filtered = filtered.filter(p => `${p.brand} ${p.model}`.toLowerCase().includes(q));
+  }
+
+  document.getElementById('result-count').textContent = `${filtered.length} منتج`;
+
+  if(filtered.length === 0){
+    list.innerHTML = `<div class="state-msg"><div class="icon">🔍</div><div>لا توجد منتجات مطابقة</div></div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(p => `
+    <div class="card" onclick="openProduct(this)">
+      <div class="card-inner">
         <div class="card-front">
-
-            <img src="${p.imgUrl || 'https://via.placeholder.com/200'}" alt="صورة">
-
-            <h3>${p.brand} - ${p.model}</h3>
-
-            <div class="price">${p.price} جنيه</div>
-
+          <div class="frame-screen">
+            ${p.imgUrl
+              ? `<img src="${p.imgUrl}" alt="${p.brand} ${p.model}" onerror="this.parentElement.innerHTML='${FALLBACK_ICON.replace(/'/g,"\\'")}'">`
+              : FALLBACK_ICON}
+          </div>
+          <div class="card-body">
+            <div class="card-brand">${p.brand || ''}</div>
+            <h3 class="card-model">${p.model || ''}</h3>
+            <div class="card-price">${formatPrice(p.price)} <small>جنيه</small></div>
+            <div class="flip-hint">اضغط لعرض التفاصيل ↺</div>
+          </div>
         </div>
-
-
         <div class="card-back">
-
-            <h3>${p.brand} - ${p.model}</h3>
-
-            <p>${p.desc}</p>
-
-            <div class="price">
-                ${p.price} جنيه
-            </div>
-
-
-            ${isAdmin ? `
-            <button class="btn-edit" onclick="event.stopPropagation(); editProduct('${p.id}')">
-                تعديل
-            </button>
-
-            <button onclick="event.stopPropagation(); deleteProduct('${p.id}')"
-            style="background:var(--danger); color:white; border:none; padding:5px 10px;">
-                حذف
-            </button>
-            ` : ''}
-
-
+          <h3>${p.brand} - ${p.model}</h3>
+          <div class="spec">${(p.desc || 'لا توجد مواصفات إضافية').replace(/\n/g,'<br>')}</div>
+          <div class="price-row">${formatPrice(p.price)} جنيه</div>
+          ${isAdmin ? `
+          <div class="admin-actions">
+            <button class="btn-edit-sm" onclick="event.stopPropagation(); editProduct('${p.id}')">✏️ تعديل</button>
+            <button class="btn-del-sm" onclick="event.stopPropagation(); askDelete('${p.id}')">🗑️ حذف</button>
+          </div>` : ''}
         </div>
-
+      </div>
     </div>
+  `).join('');
+};
 
-</div>
-`).join('');
-    }
+window.openProduct = (card) => card.classList.toggle('active');
 
-    window.editProduct = (id) => {
-        const p = allProducts.find(item => item.id === id);
-        document.getElementById('edit-id').value = p.id;
-        document.getElementById('brand').value = p.brand;
-        document.getElementById('model').value = p.model;
-        document.getElementById('desc').value = p.desc;
-        document.getElementById('price').value = p.price;
-        document.getElementById('imgUrl').value = p.imgUrl;
-        document.getElementById('form-title').innerText = "تعديل المنتج";
-        document.getElementById('admin-panel').style.display = 'block';
-        window.scrollTo(0, document.body.scrollHeight);
-    }
+document.getElementById('search-input').addEventListener('input', (e) => {
+  searchTerm = e.target.value; renderProducts();
+});
 
-    window.saveProduct = async () => {
-        const id = document.getElementById('edit-id').value;
-        const data = {
-            brand: document.getElementById('brand').value,
-            model: document.getElementById('model').value,
-            desc: document.getElementById('desc').value,
-            price: document.getElementById('price').value,
-            imgUrl: document.getElementById('imgUrl').value
-        };
+/* ---------- Modal helpers ---------- */
+window.openProductModal = () => {
+  document.getElementById('product-modal').classList.add('open');
+};
+window.closeProductModal = () => {
+  document.getElementById('product-modal').classList.remove('open');
+  resetForm();
+};
+function resetForm(){
+  ['edit-id','brand','model','desc','price','imgUrl'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('form-title').innerText = 'إضافة منتج جديد';
+  document.getElementById('img-preview').innerHTML = 'لا توجد صورة';
+}
+window.updateImgPreview = () => {
+  const url = document.getElementById('imgUrl').value.trim();
+  const box = document.getElementById('img-preview');
+  if(!url){ box.innerHTML = 'لا توجد صورة'; return; }
+  box.innerHTML = `<img src="${url}" onerror="this.parentElement.innerHTML='تعذر تحميل الصورة'">`;
+};
 
-        if(id) {
-            await updateDoc(doc(db, "products", id), data);
-            alert("تم تحديث البيانات!");
-        } else {
-            await addDoc(collection(db, "products"), data);
-            alert("تم إضافة منتج جديد!");
-        }
-document.getElementById('edit-id').value = "";
-document.getElementById('brand').value = "";
-document.getElementById('model').value = "";
-document.getElementById('desc').value = "";
-document.getElementById('price').value = "";
-document.getElementById('imgUrl').value = "";
+window.editProduct = (id) => {
+  const p = allProducts.find(item => item.id === id);
+  if(!p) return;
+  document.getElementById('edit-id').value = p.id;
+  document.getElementById('brand').value = p.brand || '';
+  document.getElementById('model').value = p.model || '';
+  document.getElementById('desc').value = p.desc || '';
+  document.getElementById('price').value = p.price || '';
+  document.getElementById('imgUrl').value = p.imgUrl || '';
+  document.getElementById('form-title').innerText = 'تعديل المنتج';
+  updateImgPreview();
+  openProductModal();
+};
 
-document.getElementById('admin-panel').style.display = "none";
+window.saveProduct = async () => {
+  const brand = document.getElementById('brand').value.trim();
+  const model = document.getElementById('model').value.trim();
+  const price = document.getElementById('price').value;
 
-await fetchProducts();    }
+  if(!brand || !model || price === ''){
+    toast('يرجى تعبئة الماركة والموديل والسعر', 'err');
+    return;
+  }
 
-    window.deleteProduct = async (id) => {
-        if(confirm("هل أنت متأكد من حذف هذا المنتج؟")) {
-            await deleteDoc(doc(db, "products", id));
-            fetchProducts();
-        }
-    }
+  const id = document.getElementById('edit-id').value;
+  const data = {
+    brand, model,
+    desc: document.getElementById('desc').value.trim(),
+    price: Number(price),
+    imgUrl: document.getElementById('imgUrl').value.trim()
+  };
 
-    window.checkAdmin = () => {
-    if(prompt("كلمة المرور:") === "1234") {
-
-        isAdmin = true;
-localStorage.setItem("admin", "true");
-        
-        document.getElementById('admin-panel').style.display = 'block';
-        
-document.getElementById('logout-btn').style.display = 'inline-block';
-        
-        renderProducts('الكل');
-
+  try{
+    if(id){
+      await updateDoc(doc(db, "products", id), data);
+      toast('تم تحديث المنتج بنجاح ✅');
     } else {
-
-        alert("كلمة المرور خاطئة");
-
+      await addDoc(collection(db, "products"), data);
+      toast('تمت إضافة المنتج بنجاح ✅');
     }
-    }
-window.logoutAdmin = () => {
+    closeProductModal();
+    await fetchProducts();
+  }catch(e){
+    toast('حدث خطأ أثناء الحفظ', 'err');
+  }
+};
 
-    isAdmin = false;
-localStorage.removeItem("admin");
-    
-    document.getElementById('admin-panel').style.display = 'none';
+window.askDelete = (id) => {
+  pendingDeleteId = id;
+  document.getElementById('confirm-modal').classList.add('open');
+};
+window.closeConfirmModal = () => {
+  pendingDeleteId = null;
+  document.getElementById('confirm-modal').classList.remove('open');
+};
+document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+  if(!pendingDeleteId) return;
+  try{
+    await deleteDoc(doc(db, "products", pendingDeleteId));
+    toast('تم حذف المنتج');
+    closeConfirmModal();
+    await fetchProducts();
+  }catch(e){
+    toast('تعذر حذف المنتج', 'err');
+  }
+});
 
-    document.getElementById('logout-btn').style.display = 'none';
+/* ---------- Admin login (Firebase Authentication) ---------- */
+window.handleAdminToggle = () => {
+  if(isAdmin){ logoutAdmin(); } else { openLoginModal(); }
+};
 
-    renderProducts('الكل');
-    
+window.openLoginModal = () => {
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-modal').classList.add('open');
+  setTimeout(() => document.getElementById('login-email').focus(), 50);
+};
+window.closeLoginModal = () => {
+  document.getElementById('login-modal').classList.remove('open');
+};
+
+window.submitLogin = async () => {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errBox = document.getElementById('login-error');
+  const btn = document.getElementById('login-submit-btn');
+
+  if(!email || !password){
+    errBox.textContent = 'يرجى إدخال البريد الإلكتروني وكلمة المرور';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'جارٍ الدخول...';
+  try{
+    await signInWithEmailAndPassword(auth, email, password);
+    closeLoginModal();
+    toast('تم الدخول كمدير ✅');
+    // isAdmin + UI refresh happen in onAuthStateChanged
+  }catch(e){
+    let msg = 'بيانات الدخول غير صحيحة';
+    if(e.code === 'auth/too-many-requests') msg = 'محاولات كثيرة، حاول لاحقًا';
+    if(e.code === 'auth/invalid-email') msg = 'البريد الإلكتروني غير صالح';
+    errBox.textContent = msg;
+    errBox.style.display = 'block';
+  }finally{
+    btn.disabled = false; btn.textContent = 'دخول';
+  }
+};
+
+function logoutAdmin(){
+  signOut(auth);
+  toast('تم تسجيل الخروج');
 }
 
-    if(isAdmin){
-    document.getElementById('admin-panel').style.display = 'block';
-    document.getElementById('logout-btn').style.display = 'inline-block';
+function refreshAdminUI(){
+  document.getElementById('admin-toggle-btn').textContent = isAdmin ? '🔓' : '🔐';
+  document.getElementById('admin-toggle-btn').title = isAdmin ? 'خروج المدير' : 'دخول المدير';
+  document.getElementById('fab-add').style.display = isAdmin ? 'flex' : 'none';
+  renderProducts();
 }
-    
-window.openProduct = (id, card) => {
 
-    card.classList.toggle("active");
+onAuthStateChanged(auth, (user) => {
+  isAdmin = !!user;
+  refreshAdminUI();
+});
 
-}
 fetchProducts();
-   </script>
+</script>
+</body>
+</html>
