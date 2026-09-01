@@ -141,27 +141,26 @@
   }
 
   /* ---------- Card (signature: phone-frame) ---------- */
-  /* direction:ltr isolates the 3D flip from the page's RTL context — in RTL,
-     rotateY()/backface-visibility render mirrored/broken in most browsers
-     unless the transformed subtree is forced back to LTR. Text direction is
-     restored explicitly on .card-body / .card-back below. */
-  .card{ height:340px; perspective:1200px; -webkit-perspective:1200px; cursor:pointer; direction:ltr; }
-  .card-inner{
-    position:relative; width:100%; height:100%;
-    transition:transform .6s cubic-bezier(.4,.2,.2,1);
-    transform-style:preserve-3d; -webkit-transform-style:preserve-3d;
-  }
-  .card.active .card-inner{ transform:rotateY(180deg); -webkit-transform:rotateY(180deg); }
+  /* NOTE: a true 3D rotateY() flip is unreliable under dir="rtl" across
+     browsers (text/faces render mirrored inconsistently). To make that bug
+     structurally impossible, the "flip" here uses only opacity + scaleX
+     crossfade — no perspective, no backface-visibility, no rotateY. */
+  .card{ height:340px; cursor:pointer; }
+  .card-inner{ position:relative; width:100%; height:100%; }
   .card-front,.card-back{
     position:absolute; inset:0; border-radius:var(--radius);
     background:var(--surface); border:1px solid var(--border);
-    backface-visibility:hidden; -webkit-backface-visibility:hidden;
     overflow:hidden;
     display:flex; flex-direction:column;
-    transition:border-color .2s, box-shadow .2s;
+    transition:opacity .28s ease, transform .28s ease, border-color .2s, box-shadow .2s;
   }
   .card:hover .card-front{ border-color:#00e5c766; box-shadow:0 10px 30px -12px #000, 0 0 0 1px #00e5c722; }
-  .card-back{ transform:rotateY(180deg); -webkit-transform:rotateY(180deg); padding:18px; direction:rtl; text-align:right; }
+  .card-back{
+    padding:18px; direction:rtl; text-align:right;
+    opacity:0; transform:scaleX(.82); pointer-events:none;
+  }
+  .card.active .card-front{ opacity:0; transform:scaleX(.82); pointer-events:none; }
+  .card.active .card-back{ opacity:1; transform:scaleX(1); pointer-events:auto; }
 
   .frame-screen{
     position:relative; margin:14px 14px 0; border-radius:14px 14px 6px 6px;
@@ -299,7 +298,7 @@
   @keyframes toast-in{ from{ opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
 
   @media (prefers-reduced-motion: reduce){
-    .card-inner, .fab, .toast{ transition:none; animation:none; }
+    .card-front, .card-back, .fab, .toast{ transition:none; animation:none; }
   }
 </style>
 </head>
