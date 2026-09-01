@@ -110,14 +110,13 @@
   }
   .search-wrap{ position:relative; }
   .search-wrap input{
-    width:100%; padding:14px 16px 14px 46px; border-radius:14px;
+    width:100%; padding:14px 46px 14px 16px; border-radius:14px;
     border:1px solid var(--border); background:var(--surface);
     color:var(--text); font-family:'Tajawal',sans-serif; font-size:15px;
     outline:none; transition:border-color .2s, box-shadow .2s;
-    text-align: right;
   }
   .search-wrap input:focus{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
-  .search-wrap svg{ position:absolute; top:50%; left:16px; transform:translateY(-50%); opacity:.5; }
+  .search-wrap svg{ position:absolute; top:50%; right:16px; transform:translateY(-50%); opacity:.5; }
 
   .filter-nav{ display:flex; gap:8px; overflow-x:auto; padding:2px 2px 6px; scrollbar-width:thin; }
   .filter-nav::-webkit-scrollbar{ height:5px; }
@@ -133,31 +132,36 @@
     background:var(--accent); border-color:var(--accent); color:#02110f; font-weight:700;
   }
 
-  .result-count{ color:var(--text-dim); font-size:13px; padding:0 4px; text-align:right; }
+  .result-count{ color:var(--text-dim); font-size:13px; padding:0 4px; }
 
   /* ---------- Grid ---------- */
   .product-grid{
     max-width:1100px; margin:18px auto 0; padding:0 20px;
-    display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:20px;
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:20px;
   }
 
   /* ---------- Card (signature: phone-frame) ---------- */
-  .card{ height:340px; perspective:1200px; cursor:pointer; direction:rtl; }
+  /* direction:ltr isolates the 3D flip from the page's RTL context — in RTL,
+     rotateY()/backface-visibility render mirrored/broken in most browsers
+     unless the transformed subtree is forced back to LTR. Text direction is
+     restored explicitly on .card-body / .card-back below. */
+  .card{ height:340px; perspective:1200px; -webkit-perspective:1200px; cursor:pointer; direction:ltr; }
   .card-inner{
     position:relative; width:100%; height:100%;
-    transition:transform .6s cubic-bezier(.4,.2,.2,1); transform-style:preserve-3d;
+    transition:transform .6s cubic-bezier(.4,.2,.2,1);
+    transform-style:preserve-3d; -webkit-transform-style:preserve-3d;
   }
-  .card.active .card-inner{ transform:rotateY(-180deg); }
+  .card.active .card-inner{ transform:rotateY(180deg); -webkit-transform:rotateY(180deg); }
   .card-front,.card-back{
     position:absolute; inset:0; border-radius:var(--radius);
     background:var(--surface); border:1px solid var(--border);
-    backface-visibility:hidden; overflow:hidden;
+    backface-visibility:hidden; -webkit-backface-visibility:hidden;
+    overflow:hidden;
     display:flex; flex-direction:column;
     transition:border-color .2s, box-shadow .2s;
-    text-align:right;
   }
   .card:hover .card-front{ border-color:#00e5c766; box-shadow:0 10px 30px -12px #000, 0 0 0 1px #00e5c722; }
-  .card-back{ transform:rotateY(-180deg); padding:18px; }
+  .card-back{ transform:rotateY(180deg); -webkit-transform:rotateY(180deg); padding:18px; direction:rtl; text-align:right; }
 
   .frame-screen{
     position:relative; margin:14px 14px 0; border-radius:14px 14px 6px 6px;
@@ -171,22 +175,34 @@
   .frame-screen img{ width:100%; height:100%; object-fit:cover; }
   .frame-screen .fallback{ font-size:44px; opacity:.25; }
 
-  .card-body{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:6px; flex:1; }
+  .card-body{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:6px; flex:1; direction:rtl; text-align:right; }
   .card-brand{ color:var(--accent); font-size:11px; font-weight:700; letter-spacing:.5px; }
   .card-model{ font-family:'Cairo',sans-serif; font-weight:700; font-size:16px; margin:0; line-height:1.3; }
   .card-price{
-    margin-top:auto; font-family:'JetBrains Mono',monospace; font-weight:700;
-    color:var(--text); font-size:17px; display:flex; align-items:baseline; gap:4px; direction: ltr; justify-content: flex-end;
+    margin-top:auto; align-self:flex-start;
+    font-family:'JetBrains Mono',monospace; font-weight:800;
+    color:#02110f; font-size:19px;
+    display:flex; align-items:baseline; gap:5px;
+    background:linear-gradient(135deg, var(--accent), #00b39c);
+    padding:7px 14px; border-radius:10px 10px 10px 3px;
+    box-shadow:0 6px 16px -6px #00e5c799;
+    position:relative;
   }
-  .card-price small{ font-family:'Tajawal',sans-serif; color:var(--text-muted); font-weight:400; font-size:12px; }
+  .card-price::before{ /* price-tag hole */
+    content:''; position:absolute; top:6px; left:6px;
+    width:5px; height:5px; border-radius:50%; background:#02110f55;
+  }
+  .card-price small{ font-family:'Tajawal',sans-serif; color:#02110f; opacity:.7; font-weight:700; font-size:11px; }
   .flip-hint{ font-size:11px; color:var(--text-dim); }
 
   .card-back h3{ font-family:'Cairo',sans-serif; margin:0 0 8px; font-size:16px; }
   .card-back .spec{ color:var(--text-muted); font-size:13.5px; line-height:1.7; flex:1; overflow-y:auto; }
   .card-back .price-row{
-    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:18px; color:var(--accent);
-    padding-top:10px; border-top:1px dashed var(--border); margin-top:8px; direction: ltr; text-align: left;
+    display:flex; align-items:baseline; justify-content:space-between;
+    font-family:'JetBrains Mono',monospace; font-weight:800; font-size:24px; color:var(--accent);
+    padding-top:12px; border-top:1px dashed var(--border); margin-top:8px;
   }
+  .card-back .price-row .price-label{ font-family:'Tajawal',sans-serif; color:var(--text-muted); font-weight:500; font-size:12.5px; }
   .admin-actions{ display:flex; gap:8px; margin-top:12px; }
   .admin-actions button{
     flex:1; border:none; border-radius:10px; padding:9px 0; cursor:pointer;
@@ -236,7 +252,7 @@
   .modal-overlay.open{ display:flex; }
   .modal{
     width:100%; max-width:440px; background:var(--surface); border:1px solid var(--border);
-    border-radius:20px; padding:26px; max-height:88vh; overflow-y:auto; text-align:right;
+    border-radius:20px; padding:26px; max-height:88vh; overflow-y:auto;
   }
   .modal h3{ font-family:'Cairo',sans-serif; margin:0 0 18px; font-size:19px; }
   .field label{ display:block; font-size:12.5px; color:var(--text-muted); margin-bottom:6px; }
@@ -244,7 +260,7 @@
   .modal input, .modal textarea{
     width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border);
     background:var(--bg-elevated); color:var(--text); font-family:'Tajawal',sans-serif; font-size:14.5px;
-    outline:none; resize:vertical; text-align:right;
+    outline:none; resize:vertical;
   }
   .modal input:focus, .modal textarea:focus{ border-color:var(--accent); }
   .img-preview{
@@ -375,7 +391,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc, deleteDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 
 const firebaseConfig = {
@@ -414,16 +430,18 @@ function formatPrice(p){
   return isNaN(n) ? p : n.toLocaleString('en-US');
 }
 
-async function fetchProducts(){
-  try{
-    const snapshot = await getDocs(collection(db, "products"));
+// Real-time listener: any change made anywhere (this site, another admin,
+// or directly in the Firebase console) is reflected instantly, with no
+// page refresh needed.
+function subscribeProducts(){
+  onSnapshot(collection(db, "products"), (snapshot) => {
     allProducts = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
     renderCategories();
     renderProducts();
-  }catch(e){
+  }, (e) => {
     document.getElementById('product-list').innerHTML =
       `<div class="state-msg"><div class="icon">⚠️</div><div>تعذر تحميل المنتجات، تحقق من الاتصال</div></div>`;
-  }
+  });
 }
 
 function renderCategories(){
@@ -471,7 +489,7 @@ window.renderProducts = () => {
         <div class="card-back">
           <h3>${p.brand} - ${p.model}</h3>
           <div class="spec">${(p.desc || 'لا توجد مواصفات إضافية').replace(/\n/g,'<br>')}</div>
-          <div class="price-row">${formatPrice(p.price)} جنيه</div>
+          <div class="price-row"><span class="price-label">السعر</span><span>${formatPrice(p.price)} جنيه</span></div>
           ${isAdmin ? `
           <div class="admin-actions">
             <button class="btn-edit-sm" onclick="event.stopPropagation(); editProduct('${p.id}')">✏️ تعديل</button>
@@ -550,7 +568,6 @@ window.saveProduct = async () => {
       toast('تمت إضافة المنتج بنجاح ✅');
     }
     closeProductModal();
-    await fetchProducts();
   }catch(e){
     toast('حدث خطأ أثناء الحفظ', 'err');
   }
@@ -570,7 +587,6 @@ document.getElementById('confirm-delete-btn').addEventListener('click', async ()
     await deleteDoc(doc(db, "products", pendingDeleteId));
     toast('تم حذف المنتج');
     closeConfirmModal();
-    await fetchProducts();
   }catch(e){
     toast('تعذر حذف المنتج', 'err');
   }
@@ -609,6 +625,7 @@ window.submitLogin = async () => {
     await signInWithEmailAndPassword(auth, email, password);
     closeLoginModal();
     toast('تم الدخول كمدير ✅');
+    // isAdmin + UI refresh happen in onAuthStateChanged
   }catch(e){
     let msg = 'بيانات الدخول غير صحيحة';
     if(e.code === 'auth/too-many-requests') msg = 'محاولات كثيرة، حاول لاحقًا';
@@ -637,7 +654,7 @@ onAuthStateChanged(auth, (user) => {
   refreshAdminUI();
 });
 
-fetchProducts();
+subscribeProducts();
 </script>
 </body>
 </html>
