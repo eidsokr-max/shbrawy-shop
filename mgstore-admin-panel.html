@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>لوحة تحكم الأدمن - M.G.STORE</title>
+<style>
+  :root{
+    --bg:#f4f6f9;
+    --surface:#ffffff;
+    --surface-2:#f0f2f5;
+    --text:#1a1d23;
+    --text-muted:#6b7280;
+    --border:#e2e5ea;
+    --primary:#4f46e5;
+    --primary-hover:#4338ca;
+    --danger:#e11d48;
+    --danger-hover:#be123c;
+    --success:#16a34a;
+    --shadow: 0 4px 14px rgba(0,0,0,0.06);
+    --radius: 14px;
+  }
+  [data-theme="dark"]{
+    --bg:#0f1115;
+    --surface:#1a1d24;
+    --surface-2:#22262f;
+    --text:#f1f2f4;
+    --text-muted:#9aa0ab;
+    --border:#2c303a;
+    --primary:#6366f1;
+    --primary-hover:#818cf8;
+    --danger:#f43f5e;
+    --danger-hover:#fb7185;
+    --success:#22c55e;
+    --shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:'Segoe UI', Tahoma, Arial, sans-serif;
+    background:var(--bg); color:var(--text);
+    transition: background .2s ease, color .2s ease;
+    min-height:100vh;
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 24px; background:var(--surface); border-bottom:1px solid var(--border);
+    position:sticky; top:0; z-index:10;
+  }
+  .brand{ font-weight:700; font-size:1.2rem; }
+  .brand span{ color:var(--primary); }
+  .topbar-actions{ display:flex; align-items:center; gap:12px; }
+  .icon-btn{
+    background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    width:38px; height:38px; border-radius:10px; cursor:pointer; font-size:1rem;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .container{ max-width:1100px; margin:0 auto; padding:24px; }
+
+  /* Gate screens */
+  #authGate, #notAdminGate{
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:80px 20px; gap:12px;
+  }
+  #authGate h2, #notAdminGate h2{ margin:0; }
+  #notAdminGate .lock-icon{ font-size:2.5rem; }
+
+  /* Admin panel */
+  #adminPanel{ display:none; }
+  .panel-header{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px;
+  }
+  .panel-header h1{ margin:0; font-size:1.4rem; }
+  .btn{
+    border:none; border-radius:10px; padding:10px 18px; font-size:.92rem; font-weight:600;
+    cursor:pointer; transition:.15s ease; display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn-primary{ background:var(--primary); color:#fff; }
+  .btn-primary:hover{ background:var(--primary-hover); }
+  .btn-danger{ background:transparent; color:var(--danger); border:1px solid var(--danger); }
+  .btn-danger:hover{ background:var(--danger); color:#fff; }
+  .btn-ghost{ background:var(--surface-2); color:var(--text); border:1px solid var(--border); }
+  .btn-ghost:hover{ background:var(--border); }
+  .btn-confirm-danger{ background:var(--danger); color:#fff; }
+  .btn-confirm-danger:hover{ background:var(--danger-hover); }
+  .btn-sm{ padding:6px 12px; font-size:.82rem; border-radius:8px; }
+
+  .toolbar{
+    display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;
+  }
+  .toolbar input, .toolbar select{
+    background:var(--surface); border:1px solid var(--border); color:var(--text);
+    padding:9px 12px; border-radius:10px; font-size:.9rem;
+  }
+  .toolbar input{ flex:1; min-width:180px; }
+
+  .product-table-wrap{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    overflow:hidden; box-shadow:var(--shadow);
+  }
+  table{ width:100%; border-collapse:collapse; }
+  thead th{
+    text-align:right; padding:14px 16px; font-size:.8rem; color:var(--text-muted);
+    background:var(--surface-2); border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:.03em;
+  }
+  tbody td{ padding:12px 16px; border-bottom:1px solid var(--border); font-size:.92rem; vertical-align:middle; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface-2); }
+  .prod-thumb{ width:42px; height:42px; border-radius:8px; object-fit:cover; background:var(--surface-2); }
+  .prod-name-cell{ display:flex; align-items:center; gap:10px; }
+  .badge{
+    display:inline-block; padding:3px 10px; border-radius:999px; font-size:.75rem; font-weight:600;
+    background:var(--surface-2); color:var(--text-muted); border:1px solid var(--border);
+  }
+  .badge.low-stock{ color:var(--danger); border-color:var(--danger); }
+  .row-actions{ display:flex; gap:8px; }
+  .empty-state{ text-align:center; padding:60px 20px; color:var(--text-muted); }
+
+  /* Modal */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);
+    align-items:center; justify-content:center; z-index:100; padding:16px;
+  }
+  .modal-overlay.active{ display:flex; }
+  .modal{
+    background:var(--surface); border-radius:var(--radius); width:100%; max-width:520px;
+    max-height:90vh; overflow-y:auto; box-shadow:var(--shadow); border:1px solid var(--border);
+  }
+  .modal-header{
+    display:flex; align-items:center; justify-content:space-between; padding:18px 22px;
+    border-bottom:1px solid var(--border);
+  }
+  .modal-header h3{ margin:0; font-size:1.1rem; }
+  .modal-close{ background:none; border:none; color:var(--text-muted); font-size:1.3rem; cursor:pointer; line-height:1; }
+  .modal-body{ padding:20px 22px; }
+  .modal-footer{
+    display:flex; justify-content:flex-end; gap:10px; padding:16px 22px;
+    border-top:1px solid var(--border);
+  }
+  .form-group{ margin-bottom:16px; }
+  .form-group label{ display:block; font-size:.85rem; margin-bottom:6px; color:var(--text-muted); font-weight:600; }
+  .form-group input, .form-group select, .form-group textarea{
+    width:100%; padding:10px 12px; border-radius:9px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--text); font-size:.92rem; font-family:inherit;
+  }
+  .form-group textarea{ resize:vertical; min-height:70px; }
+  .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .form-hint{ font-size:.78rem; color:var(--text-muted); margin-top:4px; }
+  .used-fields{ display:none; border-top:1px dashed var(--border); padding-top:14px; margin-top:4px; }
+  .used-fields.active{ display:block; }
+  .field-error{ color:var(--danger); font-size:.8rem; margin-top:4px; display:none; }
+
+  /* Delete confirm modal specifics */
+  #deleteModal .modal-body{ text-align:center; }
+  #deleteModal .warn-icon{ font-size:2.2rem; margin-bottom:8px; }
+  #deleteModal p{ color:var(--text-muted); margin:8px 0 0; }
+  #deleteModal strong{ color:var(--text); }
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:var(--surface); border:1px solid var(--border); color:var(--text);
+    padding:12px 20px; border-radius:10px; box-shadow:var(--shadow); z-index:200;
+    display:none; align-items:center; gap:8px; font-size:.9rem;
+  }
+  .toast.show{ display:flex; }
+  .toast.success{ border-color:var(--success); }
+  .toast.error{ border-color:var(--danger); }
+
+  @media (max-width:560px){
+    .form-row{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">M.G.<span>STORE</span> — لوحة التحكم</div>
+  <div class="topbar-actions">
+    <span id="adminEmailLabel" class="badge" style="display:none;"></span>
+    <button class="icon-btn" id="themeToggle" title="تبديل الوضع الداكن/الفاتح">🌙</button>
+    <button class="btn btn-ghost btn-sm" id="logoutBtn" style="display:none;">تسجيل خروج</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Not signed in -->
+  <div id="authGate">
+    <h2>يجب تسجيل الدخول</h2>
+    <p style="color:var(--text-muted)">سجّل الدخول بحساب الأدمن للوصول إلى لوحة التحكم.</p>
+  </div>
+
+  <!-- Signed in but not admin -->
+  <div id="notAdminGate">
+    <div class="lock-icon">🔒</div>
+    <h2>غير مصرح لك بالدخول</h2>
+    <p style="color:var(--text-muted)">هذه الصفحة مخصصة لمسؤولي المتجر فقط.</p>
+  </div>
+
+  <!-- Admin Panel (hidden unless isAdmin === true) -->
+  <div id="adminPanel">
+    <div class="panel-header">
+      <h1>إدارة المنتجات</h1>
+      <button class="btn btn-primary" id="openAddModalBtn">+ إضافة منتج جديد</button>
+    </div>
+
+    <div class="toolbar">
+      <input type="text" id="searchInput" placeholder="بحث باسم المنتج..." />
+      <select id="categoryFilter">
+        <option value="">كل الفئات</option>
+        <option value="new_phones">موبايلات جديدة</option>
+        <option value="used_phones">موبايلات مستعملة</option>
+        <option value="accessories">إكسسوارات</option>
+        <option value="chargers">شواحن وكابلات</option>
+        <option value="screen_protectors">سكرينات</option>
+      </select>
+    </div>
+
+    <div class="product-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>المنتج</th>
+            <th>الفئة</th>
+            <th>السعر (ج.م)</th>
+            <th>المخزون</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="productsTbody">
+          <!-- rows injected by JS -->
+        </tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none;">لا توجد منتجات مطابقة.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Add / Edit Product Modal -->
+<div class="modal-overlay" id="productModalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="productModalTitle">إضافة منتج جديد</h3>
+      <button class="modal-close" data-close="productModalOverlay">✕</button>
+    </div>
+    <form id="productForm">
+      <div class="modal-body">
+        <input type="hidden" id="productId" />
+
+        <div class="form-group">
+          <label for="productName">اسم المنتج *</label>
+          <input type="text" id="productName" required maxlength="120" />
+          <div class="field-error" id="err-productName">اسم المنتج مطلوب</div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="productCategory">الفئة *</label>
+            <select id="productCategory" required>
+              <option value="">اختر الفئة</option>
+              <option value="new_phones">موبايلات جديدة</option>
+              <option value="used_phones">موبايلات مستعملة</option>
+              <option value="accessories">إكسسوارات</option>
+              <option value="chargers">شواحن وكابلات</option>
+              <option value="screen_protectors">سكرينات</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="productPrice">السعر (ج.م) *</label>
+            <input type="number" id="productPrice" min="0" step="0.01" required />
+            <div class="field-error" id="err-productPrice">أدخل سعرًا صحيحًا</div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="productStock">الكمية بالمخزون *</label>
+            <input type="number" id="productStock" min="0" step="1" required />
+          </div>
+          <div class="form-group">
+            <label for="productImage">رابط الصورة</label>
+            <input type="url" id="productImage" placeholder="https://..." />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="productDesc">الوصف</label>
+          <textarea id="productDesc" maxlength="500"></textarea>
+        </div>
+
+        <!-- Shown only when category = used_phones -->
+        <div class="used-fields" id="usedPhoneFields">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="batteryHealth">حالة البطارية (%)</label>
+              <input type="number" id="batteryHealth" min="0" max="100" />
+            </div>
+            <div class="form-group">
+              <label for="phoneCondition">الحالة العامة</label>
+              <select id="phoneCondition">
+                <option value="excellent">ممتازة</option>
+                <option value="good">جيدة</option>
+                <option value="fair">مقبولة</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close="productModalOverlay">إلغاء</button>
+        <button type="submit" class="btn btn-primary" id="saveProductBtn">حفظ المنتج</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModalOverlay">
+  <div class="modal" id="deleteModal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3>تأكيد الحذف</h3>
+      <button class="modal-close" data-close="deleteModalOverlay">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="warn-icon">⚠️</div>
+      <p>هل أنت متأكد أنك تريد حذف <strong id="deleteProductName"></strong>؟<br>لا يمكن التراجع عن هذا الإجراء.</p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" data-close="deleteModalOverlay">إلغاء</button>
+      <button type="button" class="btn btn-confirm-danger" id="confirmDeleteBtn">حذف نهائي</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  // ---------------------------------------------------------------
+  // Firebase setup — reuse the same project/app already initialized
+  // for the M.G.STORE catalog (Firestore v9 modular SDK).
+  // ---------------------------------------------------------------
+  import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, onAuthStateChanged, signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
+    onSnapshot, query, orderBy, serverTimestamp, getDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // TODO: replace with your actual M.G.STORE Firebase config
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // ---------------------------------------------------------------
+  // Admin gate
+  // Recommended: set a custom claim { admin: true } on the admin
+  // user via a Cloud Function / Admin SDK (never trust client-only
+  // checks for real security — Firestore rules must also enforce
+  // `request.auth.token.admin == true` on writes to /products).
+  // As a fallback this also checks an /admins/{uid} Firestore doc.
+  // ---------------------------------------------------------------
+  const authGate = document.getElementById('authGate');
+  const notAdminGate = document.getElementById('notAdminGate');
+  const adminPanel = document.getElementById('adminPanel');
+  const adminEmailLabel = document.getElementById('adminEmailLabel');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  let unsubscribeProducts = null;
+  let allProducts = [];
+
+  async function checkIsAdmin(user) {
+    try {
+      const tokenResult = await user.getIdTokenResult();
+      if (tokenResult.claims && tokenResult.claims.admin === true) return true;
+    } catch (e) { /* ignore */ }
+    try {
+      const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+      return adminDoc.exists();
+    } catch (e) {
+      return false;
+    }
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    authGate.style.display = 'none';
+    notAdminGate.style.display = 'none';
+    adminPanel.style.display = 'none';
+    logoutBtn.style.display = 'none';
+    adminEmailLabel.style.display = 'none';
+
+    if (!user) {
+      authGate.style.display = 'flex';
+      return;
+    }
+
+    const isAdmin = await checkIsAdmin(user);
+    if (!isAdmin) {
+      notAdminGate.style.display = 'flex';
+      return;
+    }
+
+    adminPanel.style.display = 'block';
+    logoutBtn.style.display = 'inline-flex';
+    adminEmailLabel.style.display = 'inline-block';
+    adminEmailLabel.textContent = user.email || 'Admin';
+
+    listenToProducts();
+  });
+
+  logoutBtn.addEventListener('click', () => signOut(auth));
+
+  // ---------------------------------------------------------------
+  // Theme toggle (persists locally, defaults to light)
+  // ---------------------------------------------------------------
+  const themeToggle = document.getElementById('themeToggle');
+  const savedTheme = localStorage.getItem('mgstore_admin_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+  themeToggle.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('mgstore_admin_theme', next);
+    themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+  });
+
+  // ---------------------------------------------------------------
+  // Category labels
+  // ---------------------------------------------------------------
+  const CATEGORY_LABELS = {
+    new_phones: 'موبايلات جديدة',
+    used_phones: 'موبايلات مستعملة',
+    accessories: 'إكسسوارات',
+    chargers: 'شواحن وكابلات',
+    screen_protectors: 'سكرينات'
+  };
+
+  // ---------------------------------------------------------------
+  // Real-time product list
+  // ---------------------------------------------------------------
+  function listenToProducts() {
+    if (unsubscribeProducts) unsubscribeProducts();
+    const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+    unsubscribeProducts = onSnapshot(q, (snapshot) => {
+      allProducts = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderProducts();
+    }, (err) => {
+      showToast('تعذر تحميل المنتجات: ' + err.message, 'error');
+    });
+  }
+
+  const tbody = document.getElementById('productsTbody');
+  const emptyState = document.getElementById('emptyState');
+  const searchInput = document.getElementById('searchInput');
+  const categoryFilter = document.getElementById('categoryFilter');
+  searchInput.addEventListener('input', renderProducts);
+  categoryFilter.addEventListener('change', renderProducts);
+
+  function renderProducts() {
+    const term = searchInput.value.trim().toLowerCase();
+    const cat = categoryFilter.value;
+    const filtered = allProducts.filter(p => {
+      const matchesTerm = !term || (p.name || '').toLowerCase().includes(term);
+      const matchesCat = !cat || p.category === cat;
+      return matchesTerm && matchesCat;
+    });
+
+    tbody.innerHTML = '';
+    emptyState.style.display = filtered.length ? 'none' : 'block';
+
+    filtered.forEach(p => {
+      const tr = document.createElement('tr');
+      const lowStock = Number(p.stock) <= 3;
+      tr.innerHTML = `
+        <td>
+          <div class="prod-name-cell">
+            <img class="prod-thumb" src="${escapeAttr(p.imageUrl || '')}" onerror="this.style.visibility='hidden'" />
+            <span>${escapeHtml(p.name || '—')}</span>
+          </div>
+        </td>
+        <td><span class="badge">${CATEGORY_LABELS[p.category] || p.category || '—'}</span></td>
+        <td>${Number(p.price || 0).toLocaleString('ar-EG')}</td>
+        <td><span class="badge ${lowStock ? 'low-stock' : ''}">${p.stock ?? 0}</span></td>
+        <td>
+          <div class="row-actions">
+            <button class="btn btn-ghost btn-sm" data-edit="${p.id}">تعديل</button>
+            <button class="btn btn-danger btn-sm" data-delete="${p.id}" data-name="${escapeAttr(p.name || '')}">حذف</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('[data-edit]').forEach(btn => {
+      btn.addEventListener('click', () => openEditModal(btn.getAttribute('data-edit')));
+    });
+    tbody.querySelectorAll('[data-delete]').forEach(btn => {
+      btn.addEventListener('click', () => openDeleteModal(btn.getAttribute('data-delete'), btn.getAttribute('data-name')));
+    });
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+  }
+  function escapeAttr(str) { return escapeHtml(str); }
+
+  // ---------------------------------------------------------------
+  // Add / Edit modal
+  // ---------------------------------------------------------------
+  const productModalOverlay = document.getElementById('productModalOverlay');
+  const productModalTitle = document.getElementById('productModalTitle');
+  const productForm = document.getElementById('productForm');
+  const productIdField = document.getElementById('productId');
+  const nameField = document.getElementById('productName');
+  const categoryField = document.getElementById('productCategory');
+  const priceField = document.getElementById('productPrice');
+  const stockField = document.getElementById('productStock');
+  const imageField = document.getElementById('productImage');
+  const descField = document.getElementById('productDesc');
+  const usedFieldsBlock = document.getElementById('usedPhoneFields');
+  const batteryField = document.getElementById('batteryHealth');
+  const conditionField = document.getElementById('phoneCondition');
+  const saveProductBtn = document.getElementById('saveProductBtn');
+
+  document.getElementById('openAddModalBtn').addEventListener('click', () => openAddModal());
+  categoryField.addEventListener('change', toggleUsedFields);
+
+  function toggleUsedFields() {
+    usedFieldsBlock.classList.toggle('active', categoryField.value === 'used_phones');
+  }
+
+  function openAddModal() {
+    productForm.reset();
+    productIdField.value = '';
+    productModalTitle.textContent = 'إضافة منتج جديد';
+    clearFieldErrors();
+    toggleUsedFields();
+    openModal('productModalOverlay');
+  }
+
+  function openEditModal(id) {
+    const p = allProducts.find(x => x.id === id);
+    if (!p) return;
+    productIdField.value = p.id;
+    nameField.value = p.name || '';
+    categoryField.value = p.category || '';
+    priceField.value = p.price ?? '';
+    stockField.value = p.stock ?? '';
+    imageField.value = p.imageUrl || '';
+    descField.value = p.description || '';
+    batteryField.value = p.batteryHealth ?? '';
+    conditionField.value = p.condition || 'good';
+    productModalTitle.textContent = 'تعديل المنتج';
+    clearFieldErrors();
+    toggleUsedFields();
+    openModal('productModalOverlay');
+  }
+
+  function clearFieldErrors() {
+    document.querySelectorAll('.field-error').forEach(el => el.style.display = 'none');
+  }
+
+  productForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearFieldErrors();
+
+    let valid = true;
+    if (!nameField.value.trim()) {
+      document.getElementById('err-productName').style.display = 'block';
+      valid = false;
+    }
+    if (priceField.value === '' || Number(priceField.value) < 0) {
+      document.getElementById('err-productPrice').style.display = 'block';
+      valid = false;
+    }
+    if (!categoryField.value) valid = false;
+    if (!valid) return;
+
+    const payload = {
+      name: nameField.value.trim(),
+      category: categoryField.value,
+      price: Number(priceField.value),
+      stock: Number(stockField.value || 0),
+      imageUrl: imageField.value.trim(),
+      description: descField.value.trim(),
+    };
+    if (categoryField.value === 'used_phones') {
+      payload.batteryHealth = batteryField.value ? Number(batteryField.value) : null;
+      payload.condition = conditionField.value;
+    } else {
+      payload.batteryHealth = null;
+      payload.condition = null;
+    }
+
+    const id = productIdField.value;
+    saveProductBtn.disabled = true;
+    saveProductBtn.textContent = 'جارٍ الحفظ...';
+
+    try {
+      if (id) {
+        await updateDoc(doc(db, 'products', id), payload);
+        showToast('تم تحديث المنتج بنجاح', 'success');
+      } else {
+        await addDoc(collection(db, 'products'), { ...payload, createdAt: serverTimestamp() });
+        showToast('تمت إضافة المنتج بنجاح', 'success');
+      }
+      closeModal('productModalOverlay');
+    } catch (err) {
+      showToast('حدث خطأ: ' + err.message, 'error');
+    } finally {
+      saveProductBtn.disabled = false;
+      saveProductBtn.textContent = 'حفظ المنتج';
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Delete confirmation modal
+  // ---------------------------------------------------------------
+  let pendingDeleteId = null;
+  const deleteProductName = document.getElementById('deleteProductName');
+  const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+  function openDeleteModal(id, name) {
+    pendingDeleteId = id;
+    deleteProductName.textContent = name || 'هذا المنتج';
+    openModal('deleteModalOverlay');
+  }
+
+  confirmDeleteBtn.addEventListener('click', async () => {
+    if (!pendingDeleteId) return;
+    confirmDeleteBtn.disabled = true;
+    confirmDeleteBtn.textContent = 'جارٍ الحذف...';
+    try {
+      await deleteDoc(doc(db, 'products', pendingDeleteId));
+      showToast('تم حذف المنتج', 'success');
+      closeModal('deleteModalOverlay');
+    } catch (err) {
+      showToast('تعذر الحذف: ' + err.message, 'error');
+    } finally {
+      confirmDeleteBtn.disabled = false;
+      confirmDeleteBtn.textContent = 'حذف نهائي';
+      pendingDeleteId = null;
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Generic modal helpers
+  // ---------------------------------------------------------------
+  function openModal(id) { document.getElementById(id).classList.add('active'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close')));
+  });
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeModal(overlay.id);
+    });
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay.active').forEach(o => closeModal(o.id));
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Toast
+  // ---------------------------------------------------------------
+  let toastTimer = null;
+  function showToast(msg, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = 'toast show ' + type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+</script>
+</body>
+</html>
