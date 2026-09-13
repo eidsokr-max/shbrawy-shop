@@ -13,16 +13,15 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 // --------------------------------------------------------------------------
-// 1. FIREBASE CONFIG — replace with your project's config
-//    (Get this from Firebase Console > Project Settings > General)
+// 1. FIREBASE CONFIG — تم وضع بيانات مشروعك الحقيقية
 // --------------------------------------------------------------------------
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
+  authDomain: "shbrawy-shop.firebaseapp.com",
+  projectId: "shbrawy-shop",
+  storageBucket: "shbrawy-shop.firebasestorage.app",
+  messagingSenderId: "619982205483",
+  appId: "1:619982205483:web:cab9426ce2888220ef306e",
 };
 
 const app = initializeApp(firebaseConfig);
@@ -30,19 +29,10 @@ const auth = getAuth(app);
 
 // --------------------------------------------------------------------------
 // 2. ADMIN CONFIG
-//    IMPORTANT: This client-side email check is for UI DISPLAY ONLY
-//    (showing/hiding an admin panel). It is NOT a real access control
-//    mechanism — anyone can read this list in the browser's source.
-//    For real security you MUST also:
-//      a) Set a Firebase Custom Claim (admin: true) via a Cloud Function
-//         or the Admin SDK, and/or
-//      b) Enforce role checks in your Firestore/Storage Security Rules
-//         (e.g. request.auth.token.admin == true).
-//    Phase 2 will wire up custom claims + Firestore role documents.
 // --------------------------------------------------------------------------
 const ADMIN_EMAILS = [
   "admin@mgstore.com",
-  // add more admin emails here
+  // يمكنك إضافة بريدك الشخصي هنا لكي تظهر لك لوحة التحكم كـ Admin
 ];
 
 function isAdminEmail(email) {
@@ -192,7 +182,6 @@ signupForm.addEventListener("submit", async (e) => {
     setMessage(signupMessage, "Account created successfully!", "success");
     signupForm.reset();
     setTimeout(() => closeModal(signupOverlay), 700);
-    // onAuthStateChanged below will handle updating the UI
   } catch (error) {
     console.error("Signup error:", error);
     setMessage(signupMessage, friendlyAuthError(error), "error");
@@ -246,11 +235,10 @@ $("btnLogout").addEventListener("click", async () => {
 });
 
 // --------------------------------------------------------------------------
-// 11. AUTH STATE OBSERVER — drives all UI role-based rendering
+// 11. AUTH STATE OBSERVER
 // --------------------------------------------------------------------------
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    // Logged in
     authActions.classList.add("hidden");
     userActions.classList.remove("hidden");
     guestView.classList.add("hidden");
@@ -263,7 +251,6 @@ onAuthStateChanged(auth, (user) => {
     roleBadge.classList.toggle("hidden", !admin);
     adminPanel.classList.toggle("hidden", !admin);
   } else {
-    // Logged out
     authActions.classList.remove("hidden");
     userActions.classList.add("hidden");
     guestView.classList.remove("hidden");
