@@ -13,7 +13,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 // --------------------------------------------------------------------------
-// 1. FIREBASE CONFIG — تم وضع بيانات مشروعك الحقيقية
+// 1. FIREBASE CONFIG — Updated with your project's correct credentials
 // --------------------------------------------------------------------------
 const firebaseConfig = {
   apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
@@ -22,6 +22,7 @@ const firebaseConfig = {
   storageBucket: "shbrawy-shop.firebasestorage.app",
   messagingSenderId: "619982205483",
   appId: "1:619982205483:web:cab9426ce2888220ef306e",
+  measurementId: "G-VEWYWQM3XF"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -32,7 +33,7 @@ const auth = getAuth(app);
 // --------------------------------------------------------------------------
 const ADMIN_EMAILS = [
   "admin@mgstore.com",
-  // يمكنك إضافة بريدك الشخصي هنا لكي تظهر لك لوحة التحكم كـ Admin
+  // يمكنك إضافة بريد الإلكتروني الخاص بالأدمن هنا
 ];
 
 function isAdminEmail(email) {
@@ -97,7 +98,6 @@ document.querySelectorAll("[data-close]").forEach((btn) => {
   btn.addEventListener("click", () => closeModal($(btn.dataset.close)));
 });
 
-// click outside modal to close
 [signupOverlay, loginOverlay].forEach((overlay) => {
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) closeModal(overlay);
@@ -145,9 +145,6 @@ function friendlyAuthError(error) {
   return map[code] || "Something went wrong. Please try again.";
 }
 
-// --------------------------------------------------------------------------
-// 7. CLIENT-SIDE VALIDATION HELPERS
-// --------------------------------------------------------------------------
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
