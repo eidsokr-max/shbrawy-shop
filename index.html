@@ -1,112 +1,92 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M.G.STORE - المتجر الشامل</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M.G.STORE — Sign In</title>
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <!-- Top Bar -->
-    <header class="top-bar">
-        <div class="logo">M.G.STORE 🛒</div>
-        <div class="nav-controls">
-            <!-- Cart Button -->
-            <button id="btn-cart-toggle" class="btn btn-outline">🛒 السلة (<span id="cart-count">0</span>)</button>
-            
-            <!-- Auth Container -->
-            <div id="auth-container" style="display: inline-block; margin-right: 10px;">
-                <div id="guest-actions">
-                    <button id="btn-login-modal" class="btn btn-outline">دخول</button>
-                    <button id="btn-signup-modal" class="btn btn-primary">حساب جديد</button>
-                </div>
-                <div id="member-actions" class="hidden">
-                    <span id="user-email-display" style="font-size: 0.9rem; margin-left: 5px;"></span>
-                    <span id="role-badge" class="badge">عضو</span>
-                    <button id="btn-logout" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">خروج</button>
-                </div>
-            </div>
-        </div>
-    </header>
 
-    <!-- Main Content Area -->
-    <main class="main-content">
-        <!-- Hero Section -->
-        <section class="welcome-section">
-            <h1>مرحباً بك في M.G.STORE</h1>
-            <p>تسوق أفضل المنتجات بأفضل الأسعار، واطلبها مباشرة عبر واتساب.</p>
-        </section>
-
-        <!-- Product Catalog Section (Firestore Products) -->
-        <section class="catalog-section">
-            <h2>منتجات المتجر</h2>
-            <div id="products-grid" class="products-grid">
-                <!-- سيتم تعبئة المنتجات ديناميكياً من الـ JavaScript -->
-                <p class="loading-text">جاري تحميل المنتجات...</p>
-            </div>
-        </section>
-
-        <!-- Admin Only Dashboard Panel -->
-        <div id="admin-panel" class="admin-panel hidden">
-            <h2>🛠️ لوحة تحكم المشرف (Admin Dashboard)</h2>
-            <p>مرحباً بك بصفتك مشرفاً. يمكنك هنا إضافة منتجات جديدة أو إدارة المخزون.</p>
-            <div class="admin-actions-box">
-                <form id="add-product-form">
-                    <h3>إضافة منتج جديد</h3>
-                    <input type="text" id="prod-name" placeholder="اسم المنتج" required style="margin: 5px; padding: 5px;">
-                    <input type="number" id="prod-price" placeholder="السعر (جنية)" required style="margin: 5px; padding: 5px;">
-                    <input type="text" id="prod-image" placeholder="رابط صورة المنتج (URL)" required style="margin: 5px; padding: 5px;">
-                    <button type="submit" class="btn btn-primary">إضافة المنتج للقاعدة</button>
-                </form>
-            </div>
-        </div>
-    </main>
-
-    <!-- Shopping Cart Drawer / Modal -->
-    <div id="cart-modal" class="modal hidden">
-        <div class="modal-content cart-drawer">
-            <span class="close-modal" id="close-cart">&times;</span>
-            <h2>عربة التسوق</h2>
-            <div id="cart-items-container" class="cart-items-container">
-                <p>السلة فارغة حالياً.</p>
-            </div>
-            <div class="cart-summary">
-                <h3>الإجمالي: <span id="cart-total">0</span> جنيه</h3>
-                <button id="btn-whatsapp-checkout" class="btn btn-success btn-block">إرسال الطلب عبر واتساب 📱</button>
-            </div>
-        </div>
+  <!-- ============ TOP BAR ============ -->
+  <header class="topbar">
+    <div class="brand">M.G.<span>STORE</span></div>
+    <div class="auth-actions" id="authActions">
+      <button id="btnShowLogin" class="btn btn-ghost">Log In</button>
+      <button id="btnShowSignup" class="btn btn-primary">Sign Up</button>
     </div>
-
-    <!-- Sign Up Modal -->
-    <div id="signup-modal" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-modal" id="close-signup">&times;</span>
-            <h2>إنشاء حساب جديد</h2>
-            <form id="signup-form">
-                <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="signup-email" required></div>
-                <div class="form-group"><label>كلمة المرور (8 أحرف على الأقل)</label><input type="password" id="signup-password" required minlength="8"></div>
-                <div class="form-group"><label>تأكيد كلمة المرور</label><input type="password" id="signup-confirm-password" required></div>
-                <div id="signup-error" class="error-message"></div>
-                <button type="submit" class="btn btn-primary btn-block">تسجيل</button>
-            </form>
-        </div>
+    <div class="user-actions hidden" id="userActions">
+      <span id="userEmailLabel" class="user-email"></span>
+      <span id="roleBadge" class="badge hidden">Admin</span>
+      <button id="btnLogout" class="btn btn-ghost">Log Out</button>
     </div>
+  </header>
 
-    <!-- Login Modal -->
-    <div id="login-modal" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-modal" id="close-login">&times;</span>
-            <h2>تسجيل الدخول</h2>
-            <form id="login-form">
-                <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="login-email" required></div>
-                <div class="form-group"><label>كلمة المرور</label><input type="password" id="login-password" required></div>
-                <div id="login-error" class="error-message"></div>
-                <button type="submit" class="btn btn-primary btn-block">دخول</button>
-            </form>
-        </div>
+  <!-- ============ APP CONTENT (placeholder for later phases) ============ -->
+  <main class="app-content">
+    <div id="guestView">
+      <h1>Welcome to M.G.STORE</h1>
+      <p>Please sign up or log in to continue.</p>
     </div>
+    <div id="memberView" class="hidden">
+      <h1>Dashboard</h1>
+      <p id="memberWelcome"></p>
+      <div id="adminPanel" class="hidden admin-panel">
+        <h2>Admin Panel</h2>
+        <p>You have administrator privileges.</p>
+      </div>
+    </div>
+  </main>
 
-    <!-- Main JS (Firebase, Firestore, Cart, Auth & Admin) -->
-    <script type="module" src="app.js"></script>
+  <!-- ============ SIGN UP MODAL ============ -->
+  <div class="modal-overlay hidden" id="signupOverlay">
+    <div class="modal">
+      <button class="modal-close" data-close="signupOverlay">&times;</button>
+      <h2>Create Account</h2>
+      <form id="signupForm" novalidate>
+        <label for="signupEmail">Email</label>
+        <input type="email" id="signupEmail" placeholder="you@example.com" required autocomplete="email" />
+
+        <label for="signupPassword">Password</label>
+        <input type="password" id="signupPassword" placeholder="At least 8 characters" required minlength="8" autocomplete="new-password" />
+
+        <label for="signupConfirm">Confirm Password</label>
+        <input type="password" id="signupConfirm" placeholder="Re-enter password" required minlength="8" autocomplete="new-password" />
+
+        <div class="form-message" id="signupMessage"></div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="signupSubmitBtn">
+          <span class="btn-text">Sign Up</span>
+          <span class="spinner hidden"></span>
+        </button>
+      </form>
+      <p class="switch-link">Already have an account? <a href="#" id="switchToLogin">Log in</a></p>
+    </div>
+  </div>
+
+  <!-- ============ LOGIN MODAL ============ -->
+  <div class="modal-overlay hidden" id="loginOverlay">
+    <div class="modal">
+      <button class="modal-close" data-close="loginOverlay">&times;</button>
+      <h2>Log In</h2>
+      <form id="loginForm" novalidate>
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" placeholder="you@example.com" required autocomplete="email" />
+
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" placeholder="Your password" required autocomplete="current-password" />
+
+        <div class="form-message" id="loginMessage"></div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="loginSubmitBtn">
+          <span class="btn-text">Log In</span>
+          <span class="spinner hidden"></span>
+        </button>
+      </form>
+      <p class="switch-link">Don't have an account? <a href="#" id="switchToSignup">Sign up</a></p>
+    </div>
+  </div>
+
+  <script type="module" src="auth.js"></script>
 </body>
 </html>
