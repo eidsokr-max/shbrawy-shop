@@ -14,7 +14,6 @@
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-<!-- مكتبة مسح الباركود بالكاميرا -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
     body { font-family: 'Cairo', sans-serif; }
@@ -34,6 +33,19 @@
         100% { background-color: transparent; }
     }
     #camera-reader video { border-radius: 8px; }
+    
+    /* 🔍 قائمة اقتراحات الباركود */
+    .suggestion-item {
+        padding: 12px 16px;
+        border-bottom: 1px solid #e5e7eb;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-item:hover, .suggestion-item.active { background: #eff6ff; }
+    .suggestion-item .name { font-weight: 600; color: #1f2937; }
+    .suggestion-item .meta { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    .suggestion-item .barcode { font-family: monospace; color: #7c3aed; font-size: 12px; }
 </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -160,7 +172,10 @@
             <div class="bg-white p-4 rounded-xl shadow-sm">
                 <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
                     <h2 class="text-lg font-bold">📦 إدارة الأصناف</h2>
-                    <button onclick="openProductModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold text-sm">+ إضافة صنف</button>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="openProductModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold text-sm">+ إضافة صنف</button>
+                        <button onclick="generateMissingBarcodes()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold text-sm">🏷️ توليد باركود للناقص</button>
+                    </div>
                 </div>
                 <div class="flex gap-2 flex-wrap">
                     <input type="text" id="product-search" placeholder="🔍 بحث بالاسم أو الكود أو الباركود..." class="border p-2 rounded-lg text-sm flex-1 min-w-[200px]" oninput="renderProducts()">
@@ -248,7 +263,7 @@
             <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-right">
-                        <thead class=" border-b">
+                        <thead class="border-b">
                             <tr>
                                 <th class="p-3 text-sm">الاسم</th>
                                 <th class="p-3 text-sm">الهاتف</th>
@@ -276,7 +291,7 @@
             <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-right">
-                        <thead class=" border-b">
+                        <thead class="border-b">
                             <tr>
                                 <th class="p-3 text-sm">الاسم</th>
                                 <th class="p-3 text-sm">الهاتف</th>
@@ -304,7 +319,7 @@
             <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-right">
-                        <thead class=" border-b">
+                        <thead class="border-b">
                             <tr>
                                 <th class="p-3 text-sm">التصنيف</th>
                                 <th class="p-3 text-sm">الوصف</th>
@@ -359,7 +374,7 @@
                 <h3 class="font-bold mb-3">الأصناف الأكثر مبيعاً</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-right">
-                        <thead class=" border-b">
+                        <thead class="border-b">
                             <tr>
                                 <th class="p-2 text-sm">الصنف</th>
                                 <th class="p-2 text-sm">الكمية المباعة</th>
@@ -494,7 +509,6 @@
 
     </main>
 </div>
-
 <!-- Product Modal -->
 <div id="product-modal" class="hidden fixed inset-0 modal-overlay items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-thin">
@@ -514,7 +528,10 @@
                 </div>
                 <div>
                     <label class="text-sm font-semibold">الباركود 📷</label>
-                    <input type="text" id="prod-barcode" placeholder="امسح أو اكتب الباركود" class="w-full border p-2 rounded-lg mt-1">
+                    <div class="flex gap-2 mt-1">
+                        <input type="text" id="prod-barcode" placeholder="امسح أو اكتب" class="flex-1 border p-2 rounded-lg">
+                        <button type="button" onclick="scanBarcodeForProduct()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg font-semibold whitespace-nowrap text-sm">📷</button>
+                    </div>
                 </div>
             </div>
             <div>
@@ -632,20 +649,30 @@
         <form id="invoice-form" class="p-5 space-y-4">
             <input type="hidden" id="inv-type">
 
-            <!-- 🔍 شريط الباركود السريع -->
+            <!-- 🔍 شريط الباركود السريع مع الاقتراحات -->
             <div class="bg-gradient-to-l from-blue-50 to-indigo-50 p-3 rounded-xl border-2 border-blue-200 shadow-sm">
-                <label class="text-sm font-bold text-blue-800 mb-1 block">🔍 امسح الباركود أو اكتبه (Enter للإضافة)</label>
-                <div class="flex gap-2">
-                    <input type="text" id="inv-barcode-input" 
-                           placeholder="امسح الباركود هنا..." 
-                           autocomplete="off"
-                           class="flex-1 border-2 border-blue-400 p-3 rounded-lg text-lg font-mono focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                <label class="text-sm font-bold text-blue-800 mb-1 block">🔍 ابحث بالاسم أو الباركود — أو اكتب ← تظهر الاقتراحات</label>
+                <div class="flex gap-2 items-stretch">
+                    <div class="flex-1 relative">
+                        <input type="text" id="inv-barcode-input" 
+                               placeholder="اكتب اسم المنتج أو الباركود..." 
+                               autocomplete="off"
+                               enterkeyhint="search"
+                               class="w-full border-2 border-blue-400 p-3 rounded-lg text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                        <div id="barcode-suggestions" 
+                             class="hidden absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border-2 border-blue-300 max-h-80 overflow-y-auto z-30 scrollbar-thin">
+                        </div>
+                    </div>
+                    <button type="button" onclick="submitBarcodeInput()" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold whitespace-nowrap text-sm">
+                        ✓ إضافة
+                    </button>
                     <button type="button" onclick="openCameraScanner()" 
-                            class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold whitespace-nowrap">
-                        📷 مسح بالكاميرا
+                            class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold whitespace-nowrap text-sm">
+                        📷 كاميرا
                     </button>
                 </div>
-                <p class="text-xs text-blue-700 mt-1">💡 F2 = التركيز على الباركود | F4 = المدفوع | F9 = حفظ</p>
+                <p class="text-xs text-blue-700 mt-1">💡 اضغط على أي اقتراح لإضافته فوراً</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -758,6 +785,49 @@
     </div>
 </div>
 
+<!-- Quick Add Product Modal -->
+<div id="quick-add-product-modal" class="hidden fixed inset-0 modal-overlay items-center justify-center z-[60] p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div class="p-4 border-b bg-gradient-to-l from-green-600 to-emerald-600 text-white flex justify-between items-center">
+            <h3 class="text-lg font-bold">✨ إضافة منتج جديد سريع</h3>
+            <button onclick="closeModal('quick-add-product-modal')" class="text-2xl hover:text-gray-200">&times;</button>
+        </div>
+        <div class="bg-yellow-50 p-3 border-b border-yellow-200">
+            <p class="text-sm text-gray-700">🆕 الباركود غير مسجّل — املأ البيانات</p>
+            <p class="text-xs text-gray-500 mt-1">الباركود: <span id="quick-add-barcode-display" class="font-mono font-bold text-purple-700"></span></p>
+        </div>
+        <form id="quick-add-product-form" class="p-4 space-y-3">
+            <input type="hidden" id="quick-add-barcode">
+            <div>
+                <label class="text-sm font-semibold">اسم المنتج *</label>
+                <input type="text" id="quick-add-name" required class="w-full border p-2 rounded-lg mt-1" placeholder="مثال: بيبسي 330 مل">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-sm font-semibold">سعر التكلفة</label>
+                    <input type="number" id="quick-add-cost" min="0" step="0.01" value="0" class="w-full border p-2 rounded-lg mt-1">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold">سعر البيع *</label>
+                    <input type="number" id="quick-add-price" required min="0" step="0.01" class="w-full border p-2 rounded-lg mt-1">
+                </div>
+            </div>
+            <div>
+                <label class="text-sm font-semibold">الكمية في المخزون</label>
+                <input type="number" id="quick-add-qty" min="0" value="0" class="w-full border p-2 rounded-lg mt-1">
+            </div>
+            <div>
+                <label class="text-sm font-semibold">التصنيف (اختياري)</label>
+                <input type="text" id="quick-add-category" class="w-full border p-2 rounded-lg mt-1" placeholder="مثال: مشروبات">
+            </div>
+            <div class="flex gap-2 pt-3">
+                <button type="button" onclick="closeModal('quick-add-product-modal')" class="flex-1 py-2 bg-gray-200 rounded-lg font-semibold">إلغاء</button>
+                <button type="submit" class="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold">✨ إضافة</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Invoice View Modal -->
 <div id="invoice-view-modal" class="hidden fixed inset-0 modal-overlay items-start justify-center z-50 p-4 overflow-y-auto">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-4">
@@ -857,7 +927,7 @@ import {
     query, serverTimestamp, getDoc, setDoc, where, getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ============ Firebase Config (جديد - shbrawy-shop) ============
+// ============ Firebase Config ============
 const firebaseConfig = {
     apiKey: "AIzaSyCGJQVtLATT1yFdkR58JyTxJ0kbQhnLVRg",
     authDomain: "shbrawy-shop.firebaseapp.com",
@@ -939,6 +1009,20 @@ function dateKey(ts) {
     return d.toISOString().slice(0, 10);
 }
 
+function playBeep() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 1200;
+        gain.gain.value = 0.08;
+        osc.start();
+        setTimeout(() => { osc.stop(); ctx.close(); }, 90);
+    } catch (e) {}
+}
+
 // ============ Auth ============
 let authMode = 'login';
 function switchAuthMode(mode) {
@@ -971,7 +1055,6 @@ $('auth-form').addEventListener('submit', async (e) => {
         if (authMode === 'login') {
             await signInWithEmailAndPassword(auth, email, password);
         } else {
-            // ❌ التسجيل مغلق
             showToast('التسجيل مغلق. تواصل مع المدير.', 'error');
             submitBtn.disabled = false;
             submitBtn.textContent = 'إنشاء حساب';
@@ -982,8 +1065,6 @@ $('auth-form').addEventListener('submit', async (e) => {
             'auth/invalid-credential': 'بيانات الدخول غير صحيحة',
             'auth/user-not-found': 'لا يوجد حساب بهذا البريد',
             'auth/wrong-password': 'كلمة المرور غير صحيحة',
-            'auth/email-already-in-use': 'البريد مستخدم بالفعل',
-            'auth/weak-password': 'كلمة المرور ضعيفة',
             'auth/invalid-email': 'البريد غير صحيح'
         };
         errEl.textContent = msgs[err.code] || 'خطأ: ' + err.message;
@@ -1144,8 +1225,7 @@ function switchTab(tab) {
     if (tab === 'reports') setTimeout(generateReport, 100);
     if (tab === 'backup') setTimeout(renderBackupStats, 100);
 }
-
-// ============ Products ============
+    // ============ Products ============
 function openProductModal(id) {
     $('product-form').reset();
     $('prod-id').value = '';
@@ -1200,6 +1280,32 @@ async function deleteProduct(id) {
     if (!await confirmDialog(`حذف "${p.name}"؟`, 'تأكيد الحذف')) return;
     try { await deleteDoc(doc(db, 'products', id)); showToast('تم الحذف', 'info'); }
     catch (err) { showToast('فشل الحذف: ' + err.message, 'error'); }
+}
+
+async function generateMissingBarcodes() {
+    const missing = products.filter(p => !p.barcode);
+    if (missing.length === 0) { showToast('✅ كل المنتجات لها باركود', 'success'); return; }
+    if (!await confirmDialog(`سيتم توليد باركود تلقائي لـ ${missing.length} منتج. متابعة؟`, '🏷️ توليد باركود')) return;
+    
+    showToast(`جارٍ التوليد...`, 'info');
+    let success = 0;
+    const existingBarcodes = new Set(products.map(p => p.barcode).filter(Boolean));
+    
+    for (const p of missing) {
+        try {
+            let barcode; let attempts = 0;
+            do {
+                const part1 = String(Math.floor(Math.random() * 1e9)).padStart(9, '0');
+                const part2 = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+                barcode = '2' + part1 + part2;
+                attempts++;
+            } while (existingBarcodes.has(barcode) && attempts < 10);
+            existingBarcodes.add(barcode);
+            await updateDoc(doc(db, 'products', p.id), { barcode, updatedAt: serverTimestamp() });
+            success++;
+        } catch (err) { console.warn('فشل توليد لـ', p.name, err); }
+    }
+    showToast(`✅ تم توليد ${success} باركود`, 'success');
 }
 
 function renderProducts() {
@@ -1305,7 +1411,6 @@ function renderParties(type) {
 
     tbody.innerHTML = list.map(p => {
         let actualBalance = p.openingBalance || 0;
-
         invoices.forEach(inv => {
             if (inv.partyId !== p.id) return;
             if (type === 'customer') {
@@ -1316,7 +1421,6 @@ function renderParties(type) {
                 else if (inv.type === 'purchase_return') actualBalance -= (inv.total - (inv.paid || 0));
             }
         });
-
         payments.forEach(pay => {
             if (pay.partyId !== p.id) return;
             if (type === 'customer') {
@@ -1330,7 +1434,6 @@ function renderParties(type) {
         const balClass = type === 'customer'
             ? (bal > 0 ? 'text-red-600' : bal < 0 ? 'text-green-600' : 'text-gray-500')
             : (bal > 0 ? 'text-orange-600' : bal < 0 ? 'text-green-600' : 'text-gray-500');
-
         const balLabel = type === 'customer'
             ? (bal > 0 ? 'مدين' : bal < 0 ? 'دائن' : 'متوازن')
             : (bal > 0 ? 'أنت مدين' : bal < 0 ? 'دائن' : 'متوازن');
@@ -1356,11 +1459,354 @@ function renderParties(type) {
     }).join('');
 }
 
+// ============ Barcode & Suggestions (NEW) ============
+let html5QrCode = null;
+
+function findProductByBarcode(code) {
+    if (!code) return null;
+    const clean = String(code).trim().toLowerCase();
+    return products.find(p =>
+        (p.sku || '').toLowerCase() === clean ||
+        (p.barcode || '').toLowerCase() === clean
+    );
+}
+
+function submitBarcodeInput() {
+    const input = $('inv-barcode-input');
+    if (!input) return;
+    const code = input.value.trim();
+    if (!code) { showToast('اكتب باركود أو اسم أولاً', 'warn'); return; }
+    const success = addProductByBarcode(code);
+    if (success) {
+        input.value = '';
+        $('barcode-suggestions').classList.add('hidden');
+    }
+    input.focus();
+}
+
+function showBarcodeSuggestions(query) {
+    const container = $('barcode-suggestions');
+    if (!container) return;
+    query = String(query || '').trim().toLowerCase();
+    if (!query || query.length < 1) {
+        container.classList.add('hidden');
+        container.innerHTML = '';
+        return;
+    }
+    const matches = products.filter(p =>
+        (p.name || '').toLowerCase().includes(query) ||
+        (p.barcode || '').toLowerCase().includes(query) ||
+        (p.sku || '').toLowerCase().includes(query)
+    ).slice(0, 8);
+
+    if (matches.length === 0) {
+        container.innerHTML = `
+            <div class="p-4 text-center text-gray-400 text-sm">
+                لا توجد نتائج لـ "${escapeHtml(query)}"
+                <br>
+                <button type="button" onclick="quickAddFromSearch('${escapeHtml(query).replace(/'/g, '&#39;')}')" 
+                        class="mt-2 text-xs bg-green-600 text-white px-3 py-1 rounded-lg">
+                    + إضافة منتج جديد
+                </button>
+            </div>`;
+        container.classList.remove('hidden');
+        return;
+    }
+
+    const invType = $('inv-type')?.value || 'sale';
+    const priceField = (invType === 'sale' || invType === 'sale_return') ? 'sellPrice' : 'costPrice';
+    const countInfo = matches.length === 8 
+        ? `<div class="p-2 text-xs text-center text-gray-500 bg-gray-50 border-b">عرض 8 نتائج — استمر بالكتابة</div>`
+        : matches.length > 1
+            ? `<div class="p-2 text-xs text-center text-gray-500 bg-gray-50 border-b">${matches.length} نتائج</div>`
+            : '';
+
+    container.innerHTML = countInfo + matches.map(p => {
+        const price = p[priceField] || 0;
+        const stockBadge = invType === 'sale' && p.qty <= 0
+            ? `<span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded">نفد</span>`
+            : `<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">متاح: ${p.qty}</span>`;
+        return `
+            <div class="suggestion-item" onclick="selectSuggestion('${p.id}')">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <div class="name">${escapeHtml(p.name)}</div>
+                        <div class="meta flex items-center gap-2 mt-1">
+                            ${p.barcode ? `<span class="barcode">📷 ${escapeHtml(p.barcode)}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="text-left">
+                        <div class="font-bold text-blue-700">${formatMoney(price)} ${settings.currency}</div>
+                        <div class="mt-1">${stockBadge}</div>
+                    </div>
+                </div>
+            </div>`;
+    }).join('');
+    container.classList.remove('hidden');
+}
+
+function selectSuggestion(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product) { showToast('المنتج غير موجود', 'error'); return; }
+    addProductByBarcode(product.barcode || product.sku || product.id);
+    const container = $('barcode-suggestions');
+    if (container) { container.classList.add('hidden'); container.innerHTML = ''; }
+    const input = $('inv-barcode-input');
+    if (input) { input.value = ''; input.focus(); }
+}
+
+function quickAddFromSearch(query) {
+    $('barcode-suggestions').classList.add('hidden');
+    openQuickAddProductModal(query);
+}
+
+function setupSuggestionHide() {
+    document.addEventListener('click', (e) => {
+        const container = $('barcode-suggestions');
+        const input = $('inv-barcode-input');
+        if (!container || !input) return;
+        if (!container.contains(e.target) && e.target !== input) {
+            container.classList.add('hidden');
+        }
+    });
+}
+
+function addProductByBarcode(code) {
+    const type = $('inv-type').value;
+    if (!type) { showToast('افتح فاتورة أولاً', 'warn'); return false; }
+    const cleanCode = String(code).trim();
+    if (!cleanCode) return false;
+
+    // البحث المباشر
+    const product = findProductByBarcode(cleanCode);
+    if (!product) {
+        // محاولة إيجاد بالاسم (إذا كتب المستخدم اسم)
+        const byName = products.find(p => (p.name || '').toLowerCase() === cleanCode.toLowerCase());
+        if (byName) {
+            return addProductToInvoiceInternal(byName);
+        }
+        openQuickAddProductModal(cleanCode);
+        return false;
+    }
+    return addProductToInvoiceInternal(product);
+}
+
+function addProductToInvoiceInternal(product) {
+    const type = $('inv-type').value;
+    if (type === 'sale' && product.qty <= 0) {
+        showToast(`⚠️ الصنف "${product.name}" نفد من المخزون`, 'warn');
+        return false;
+    }
+    const existingRows = document.querySelectorAll('#invoice-items-body tr');
+    for (const tr of existingRows) {
+        const select = tr.querySelector('.inv-item-product');
+        if (select && select.value === product.id) {
+            const qtyInput = tr.querySelector('.inv-item-qty');
+            const currentQty = parseFloat(qtyInput.value) || 0;
+            const newQty = currentQty + 1;
+            if (tr.dataset.maxQty) {
+                const max = parseFloat(tr.dataset.maxQty) || 0;
+                if (newQty > max) { showToast(`الحد الأقصى للإرجاع: ${max}`, 'warn'); return false; }
+            }
+            if (type === 'sale' && newQty > product.qty) {
+                showToast(`⚠️ المخزون المتاح: ${product.qty}`, 'warn'); return false;
+            }
+            qtyInput.value = newQty;
+            recalcInvoice();
+            tr.classList.add('barcode-flash');
+            setTimeout(() => tr.classList.remove('barcode-flash'), 600);
+            showToast(`✅ ${product.name} × ${newQty}`, 'success');
+            playBeep();
+            return true;
+        }
+    }
+    addProductRowToInvoice(product);
+    showToast(`✅ تمت إضافة: ${product.name}`, 'success');
+    playBeep();
+    return true;
+}
+
+function addProductRowToInvoice(product) {
+    const type = $('inv-type').value;
+    const priceField = (type === 'sale' || type === 'sale_return') ? 'sellPrice' : 'costPrice';
+    const existingRows = document.querySelectorAll('#invoice-items-body tr');
+    const emptyRow = Array.from(existingRows).find(tr => {
+        const sel = tr.querySelector('.inv-item-product');
+        return sel && !sel.value;
+    });
+    const rowId = 'inv-item-' + Date.now() + Math.random().toString(36).slice(2, 6);
+    const tbody = $('invoice-items-body');
+    const price = product[priceField] || 0;
+    const isSale = type === 'sale';
+    const tr = document.createElement('tr');
+    tr.id = rowId;
+    tr.className = 'border-b barcode-flash';
+    tr.dataset.cost = product.costPrice || 0;
+    tr.innerHTML = `
+        <td class="p-2">
+            <select class="inv-item-product w-full border rounded p-1 text-sm" onchange="onInvoiceItemProductChange('${rowId}')">
+                <option value="">اختر الصنف</option>
+                ${products.map(p => {
+                    const availableQty = isSale ? p.qty : '∞';
+                    return `<option value="${p.id}" data-price="${p[priceField] || 0}" data-cost="${p.costPrice || 0}" data-stock="${p.qty}" ${p.id === product.id ? 'selected' : ''}>${escapeHtml(p.name)} (متاح: ${availableQty})</option>`;
+                }).join('')}
+            </select>
+        </td>
+        <td class="p-2"><input type="number" class="inv-item-qty w-full border rounded p-1 text-sm" value="1" min="1" oninput="recalcInvoice()"></td>
+        <td class="p-2"><input type="number" class="inv-item-price w-full border rounded p-1 text-sm" value="${price.toFixed(2)}" min="0" step="0.01" oninput="recalcInvoice()"></td>
+        <td class="p-2 inv-item-total font-semibold">${formatMoney(price)}</td>
+        <td class="p-2"><button type="button" onclick="removeInvoiceItem('${rowId}')" class="text-red-500 hover:text-red-700 text-lg">&times;</button></td>
+    `;
+    if (emptyRow && !emptyRow.dataset.productId) emptyRow.replaceWith(tr);
+    else tbody.appendChild(tr);
+    recalcInvoice();
+    setTimeout(() => tr.classList.remove('barcode-flash'), 600);
+}
+
+async function scanBarcodeForProduct() {
+    const modal = $('camera-modal');
+    const status = $('camera-status');
+    const titleEl = modal.querySelector('h3');
+    const originalTitle = titleEl.textContent;
+    titleEl.textContent = '📷 امسح باركود المنتج';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    status.textContent = 'جارٍ تشغيل الكاميرا...';
+    status.className = 'text-sm text-center mt-3 text-blue-600';
+    try {
+        html5QrCode = new Html5Qrcode("camera-reader");
+        const config = {
+            fps: 10, qrbox: { width: 280, height: 180 },
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.QR_CODE
+            ]
+        };
+        await html5QrCode.start({ facingMode: "environment" }, config,
+            (decodedText) => {
+                status.textContent = `✅ تم اكتشاف: ${decodedText}`;
+                status.className = 'text-sm text-center mt-3 text-green-600 font-bold';
+                playBeep();
+                $('prod-barcode').value = decodedText;
+                closeCameraScanner();
+                titleEl.textContent = originalTitle;
+                showToast(`✅ تم مسح الباركود: ${decodedText}`, 'success');
+            },
+            () => {}
+        );
+        status.textContent = '📷 وجّه الكاميرا نحو الباركود المطبوع...';
+        status.className = 'text-sm text-center mt-3 text-green-600';
+    } catch (err) {
+        status.textContent = '❌ فشل تشغيل الكاميرا: ' + (err.message || 'تأكد من الأذونات');
+        status.className = 'text-sm text-center mt-3 text-red-600';
+    }
+}
+
+async function openCameraScanner() {
+    const modal = $('camera-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    const status = $('camera-status');
+    status.textContent = 'جارٍ تشغيل الكاميرا...';
+    status.className = 'text-sm text-center mt-3 text-blue-600';
+    try {
+        html5QrCode = new Html5Qrcode("camera-reader");
+        const config = {
+            fps: 10, qrbox: { width: 280, height: 180 },
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.QR_CODE
+            ]
+        };
+        await html5QrCode.start({ facingMode: "environment" }, config,
+            (decodedText) => {
+                status.textContent = `✅ تم اكتشاف: ${decodedText}`;
+                status.className = 'text-sm text-center mt-3 text-green-600 font-bold';
+                playBeep();
+                addProductByBarcode(decodedText);
+                closeCameraScanner();
+            },
+            () => {}
+        );
+        status.textContent = '📷 وجّه الكاميرا نحو الباركود...';
+        status.className = 'text-sm text-center mt-3 text-green-600';
+    } catch (err) {
+        status.textContent = '❌ فشل تشغيل الكاميرا: ' + (err.message || 'تأكد من الأذونات');
+        status.className = 'text-sm text-center mt-3 text-red-600';
+    }
+}
+
+async function closeCameraScanner() {
+    try {
+        if (html5QrCode) { await html5QrCode.stop(); html5QrCode.clear(); html5QrCode = null; }
+    } catch (e) {}
+    const modal = $('camera-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    const reader = $('camera-reader');
+    if (reader) reader.innerHTML = '';
+}
+
+function openQuickAddProductModal(barcode) {
+    $('quick-add-barcode').value = barcode;
+    $('quick-add-barcode-display').textContent = barcode;
+    $('quick-add-name').value = '';
+    $('quick-add-cost').value = '0';
+    $('quick-add-price').value = '';
+    $('quick-add-qty').value = '0';
+    $('quick-add-category').value = '';
+    openModal('quick-add-product-modal');
+    setTimeout(() => $('quick-add-name').focus(), 200);
+}
+
+$('quick-add-product-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const barcode = $('quick-add-barcode').value.trim();
+    const name = $('quick-add-name').value.trim();
+    const price = parseFloat($('quick-add-price').value) || 0;
+    const cost = parseFloat($('quick-add-cost').value) || 0;
+    const qty = parseInt($('quick-add-qty').value) || 0;
+    const category = $('quick-add-category').value.trim();
+    if (!name) { showToast('اسم المنتج مطلوب', 'error'); return; }
+    if (price <= 0) { showToast('سعر البيع مطلوب', 'error'); return; }
+    if (findProductByBarcode(barcode)) { showToast('⚠️ الباركود موجود بالفعل!', 'warn'); return; }
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'جارٍ الحفظ...';
+    try {
+        const productData = {
+            name, barcode, sku: '', category, qty,
+            costPrice: cost, sellPrice: price,
+            minQty: settings.lowStockThreshold || 5,
+            ownerId: currentUser.uid,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        };
+        const docRef = await addDoc(collection(db, 'products'), productData);
+        const newProduct = { id: docRef.id, ...productData };
+        products.push(newProduct);
+        addProductRowToInvoice(newProduct);
+        closeModal('quick-add-product-modal');
+        showToast(`✅ تمت إضافة "${name}"`, 'success');
+        playBeep();
+        setTimeout(() => { const b = $('inv-barcode-input'); if (b) b.focus(); }, 300);
+    } catch (err) {
+        showToast('فشل الحفظ: ' + err.message, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '✨ إضافة';
+    }
+});
+
 // ============ Invoices ============
 function openInvoiceModal(type) {
     $('invoice-items-body').innerHTML = '';
     $('invoice-form').reset();
-
     $('inv-type').value = type;
     const isSale = type === 'sale';
     const isSaleReturn = type === 'sale_return';
@@ -1368,18 +1814,13 @@ function openInvoiceModal(type) {
     const isReturn = isSaleReturn || isPurchaseReturn;
 
     const titles = {
-        sale: '🧾 فاتورة بيع',
-        purchase: '🚚 فاتورة شراء',
-        sale_return: '↩️ مرتجع بيع (من عميل)',
-        purchase_return: '↩️ مرتجع شراء (لمورد)'
+        sale: '🧾 فاتورة بيع', purchase: '🚚 فاتورة شراء',
+        sale_return: '↩️ مرتجع بيع (من عميل)', purchase_return: '↩️ مرتجعالشراء (لمورد)'
     };
     $('invoice-modal-title').textContent = titles[type] || 'فاتورة';
-
     $('inv-party-label').textContent = (isSale || isSaleReturn) ? 'العميل *' : 'المورد *';
-
     $('inv-number-display').value = generateInvoiceNumber(type);
     $('inv-date').value = new Date().toISOString().slice(0, 10);
-
     $('inv-discount').value = 0;
     $('inv-paid').value = 0;
     $('inv-subtotal').textContent = '0.00';
@@ -1389,27 +1830,18 @@ function openInvoiceModal(type) {
     $('inv-remaining').textContent = '0.00';
 
     const returnSection = $('inv-return-section');
-    if (returnSection) {
-        if (isReturn) {
-            returnSection.classList.remove('hidden');
-            updateOriginalInvoicesSelect();
-        } else {
-            returnSection.classList.add('hidden');
-        }
-    }
+    if (isReturn) { returnSection.classList.remove('hidden'); updateOriginalInvoicesSelect(); }
+    else { returnSection.classList.add('hidden'); }
 
     updateInvoicePartySelect();
     addInvoiceItem();
-
     const barcodeInput = $('inv-barcode-input');
     if (barcodeInput) barcodeInput.value = '';
+    const sug = $('barcode-suggestions');
+    if (sug) { sug.classList.add('hidden'); sug.innerHTML = ''; }
 
     openModal('invoice-modal');
-
-    // تركيز تلقائي على حقل الباركود
-    setTimeout(() => {
-        if (barcodeInput) barcodeInput.focus();
-    }, 300);
+    setTimeout(() => { if (barcodeInput) barcodeInput.focus(); }, 300);
 }
 
 function generateInvoiceNumber(type) {
@@ -1437,7 +1869,6 @@ function addInvoiceItem() {
     const isSale = type === 'sale';
     const priceField = (type === 'sale' || type === 'sale_return') ? 'sellPrice' : 'costPrice';
     const tbody = $('invoice-items-body');
-
     const tr = document.createElement('tr');
     tr.id = rowId;
     tr.className = 'border-b';
@@ -1491,7 +1922,6 @@ function recalcInvoice() {
     const total = Math.max(0, subtotal - discount);
     const paid = parseFloat($('inv-paid').value) || 0;
     const remaining = Math.max(0, total - paid);
-
     $('inv-subtotal').textContent = formatMoney(subtotal);
     $('inv-discount-display').textContent = formatMoney(discount);
     $('inv-total').textContent = formatMoney(total);
@@ -1499,35 +1929,26 @@ function recalcInvoice() {
     $('inv-remaining').textContent = formatMoney(remaining);
 }
 
-// ============ Return Invoices ============
 function updateOriginalInvoicesSelect() {
     const type = $('inv-type').value;
     const isSaleReturn = type === 'sale_return';
     const originalType = isSaleReturn ? 'sale' : 'purchase';
-
     const select = $('inv-original');
     if (!select) return;
-
     const originalInvoices = invoices.filter(i => i.type === originalType);
-
     select.innerHTML = '<option value="">اختر الفاتورة الأصلية...</option>' +
         originalInvoices.map(inv =>
-            `<option value="${inv.id}">
-                ${escapeHtml(inv.number)} — ${escapeHtml(inv.partyName)} — ${formatMoney(inv.total)} ${settings.currency}
-            </option>`
+            `<option value="${inv.id}">${escapeHtml(inv.number)} — ${escapeHtml(inv.partyName)} — ${formatMoney(inv.total)} ${settings.currency}</option>`
         ).join('');
 }
 
 function loadReturnItems() {
     const originalId = $('inv-original').value;
     if (!originalId) { showToast('اختر الفاتورة الأصلية أولاً', 'warn'); return; }
-
     const original = invoices.find(i => i.id === originalId);
     if (!original) { showToast('الفاتورة الأصلية غير موجودة', 'error'); return; }
-
     $('inv-party').value = original.partyId;
     $('invoice-items-body').innerHTML = '';
-
     const previousReturns = {};
     const returnType = $('inv-type').value;
     invoices.forEach(inv => {
@@ -1537,22 +1958,17 @@ function loadReturnItems() {
             });
         }
     });
-
     (original.items || []).forEach(item => {
         const alreadyReturned = previousReturns[item.productId] || 0;
         const availableToReturn = item.qty - alreadyReturned;
         addReturnItemRow(item, availableToReturn);
     });
-
-    if (original.items.length === 0) {
-        showToast('الفاتورة الأصلية لا تحتوي على أصناف', 'error');
-    }
+    if (original.items.length === 0) showToast('الفاتورة الأصلية لا تحتوي على أصناف', 'error');
 }
 
 function addReturnItemRow(item, maxQty) {
     const rowId = 'inv-item-' + Date.now() + Math.random().toString(36).slice(2, 6);
     const tbody = $('invoice-items-body');
-
     const tr = document.createElement('tr');
     tr.id = rowId;
     tr.className = 'border-b';
@@ -1562,14 +1978,10 @@ function addReturnItemRow(item, maxQty) {
     tr.innerHTML = `
         <td class="p-2">
             <div class="text-sm font-semibold">${escapeHtml(item.name)}</div>
-            <div class="text-xs text-gray-500">الأصلية: ${item.qty} | المتاح للإرجاع: <span class="font-bold text-red-600">${maxQty}</span></div>
+            <div class="text-xs text-gray-500">الأصلية: ${item.qty} | المتاح: <span class="font-bold text-red-600">${maxQty}</span></div>
         </td>
-        <td class="p-2">
-            <input type="number" class="inv-item-qty w-full border rounded p-1 text-sm" value="0" min="0" max="${maxQty}" oninput="validateReturnQty(this); recalcInvoice();">
-        </td>
-        <td class="p-2">
-            <input type="number" class="inv-item-price w-full border rounded p-1 text-sm" value="${item.price}" min="0" step="0.01" oninput="recalcInvoice()">
-        </td>
+        <td class="p-2"><input type="number" class="inv-item-qty w-full border rounded p-1 text-sm" value="0" min="0" max="${maxQty}" oninput="validateReturnQty(this); recalcInvoice();"></td>
+        <td class="p-2"><input type="number" class="inv-item-price w-full border rounded p-1 text-sm" value="${item.price}" min="0" step="0.01" oninput="recalcInvoice()"></td>
         <td class="p-2 inv-item-total font-semibold">0.00</td>
         <td class="p-2"><button type="button" onclick="removeInvoiceItem('${rowId}')" class="text-red-500 hover:text-red-700 text-lg">&times;</button></td>
     `;
@@ -1580,10 +1992,7 @@ function validateReturnQty(input) {
     const tr = input.closest('tr');
     const max = parseFloat(tr.dataset.maxQty) || 0;
     const val = parseFloat(input.value) || 0;
-    if (val > max) {
-        input.value = max;
-        showToast(`الحد الأقصى للإرجاع: ${max}`, 'warn');
-    }
+    if (val > max) { input.value = max; showToast(`الحد الأقصى للإرجاع: ${max}`, 'warn'); }
     if (val < 0) input.value = 0;
 }
 
@@ -1597,10 +2006,8 @@ $('invoice-form').addEventListener('submit', async (e) => {
     const isPurchaseReturn = type === 'purchase_return';
     const isReturn = isSaleReturn || isPurchaseReturn;
     const isSaleLike = isSale || isSaleReturn;
-
     const partyId = $('inv-party').value;
     if (!partyId) { showToast('اختر الجهة', 'error'); return; }
-
     const partyArr = isSaleLike ? customers : suppliers;
     const party = partyArr.find(p => p.id === partyId);
     if (!party) { showToast('الجهة غير موجودة', 'error'); return; }
@@ -1624,8 +2031,7 @@ $('invoice-form').addEventListener('submit', async (e) => {
             items.push({ productId, name: product?.name || 'غير معروف', qty, price, costPrice: cost, total: qty * price });
         }
     });
-
-    if (items.length === 0) { showToast('أضف بنداً واحداً على الأقل (كمية > 0)', 'error'); return; }
+    if (items.length === 0) { showToast('أضف بنداً واحداً على الأقل', 'error'); return; }
 
     if (isReturn && originalInvoice) {
         const previousReturns = {};
@@ -1636,26 +2042,15 @@ $('invoice-form').addEventListener('submit', async (e) => {
                 });
             }
         });
-
         for (const item of items) {
             const originalItem = originalInvoice.items.find(i => i.productId === item.productId);
             if (!originalItem) { showToast(`الصنف "${item.name}" غير موجود في الأصلية`, 'error'); return; }
             const alreadyReturned = previousReturns[item.productId] || 0;
             const availableToReturn = originalItem.qty - alreadyReturned;
-            if (item.qty > availableToReturn) {
-                showToast(`الكمية المُرتجعة من "${item.name}" تتجاوز المتاح (${availableToReturn})`, 'error');
-                return;
-            }
+            if (item.qty > availableToReturn) { showToast(`الكمية المُرتجعة تتجاوز المتاح (${availableToReturn})`, 'error'); return; }
         }
     }
-
-    if (isSale) {
-        for (const item of items) {
-            const p = products.find(x => x.id === item.productId);
-            if (!p) { showToast(`الصنف "${item.name}" غير موجود`, 'error'); return; }
-            if (p.qty < item.qty) { showToast(`الكمية غير كافية للصنف "${p.name}" (متاح: ${p.qty})`, 'error'); return; }
-        }
-    } else if (isPurchaseReturn) {
+    if (isSale || isPurchaseReturn) {
         for (const item of items) {
             const p = products.find(x => x.id === item.productId);
             if (!p) { showToast(`الصنف "${item.name}" غير موجود`, 'error'); return; }
@@ -1670,8 +2065,7 @@ $('invoice-form').addEventListener('submit', async (e) => {
     const remaining = Math.max(0, total - paid);
 
     const invoice = {
-        type,
-        number: $('inv-number-display').value,
+        type, number: $('inv-number-display').value,
         partyId, partyName: party.name, items,
         subtotal, discount, total, paid, remaining,
         paymentMethod: $('inv-payment-method').value,
@@ -1679,32 +2073,24 @@ $('invoice-form').addEventListener('submit', async (e) => {
         date: $('inv-date').value || new Date().toISOString().slice(0, 10),
         originalInvoiceId: originalInvoice?.id || null,
         originalInvoiceNumber: originalInvoice?.number || null,
-        ownerId: currentUser.uid,
-        createdAt: serverTimestamp()
+        ownerId: currentUser.uid, createdAt: serverTimestamp()
     };
 
     const submitBtn = e.target.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'جارٍ الحفظ...';
-
+    submitBtn.disabled = true; submitBtn.textContent = 'جارٍ الحفظ...';
     try {
         const invRef = await addDoc(collection(db, 'invoices'), invoice);
-
         for (const item of items) {
             const p = products.find(x => x.id === item.productId);
             if (!p) continue;
             let newQty = p.qty;
-
             if (isSale) newQty -= item.qty;
             else if (isPurchase) newQty += item.qty;
             else if (isSaleReturn) newQty += item.qty;
             else if (isPurchaseReturn) newQty -= item.qty;
-
             if (newQty < 0) newQty = 0;
-
             await updateDoc(doc(db, 'products', item.productId), { qty: newQty, updatedAt: serverTimestamp() });
         }
-
         if (isSale && remaining > 0) {
             await updateDoc(doc(db, 'customers', partyId), { balance: (party.balance || 0) + remaining });
         } else if (isSaleReturn) {
@@ -1715,64 +2101,36 @@ $('invoice-form').addEventListener('submit', async (e) => {
             await updateDoc(doc(db, 'suppliers', partyId), { balance: (party.balance || 0) - (total - paid) });
         }
 
-        const msgs = {
-            sale: 'تم حفظ فاتورة البيع ✅',
-            purchase: 'تم حفظ فاتورة الشراء ✅',
-            sale_return: 'تم حفظ مرتجع البيع ✅',
-            purchase_return: 'تم حفظ مرتجع الشراء ✅'
-        };
+        const msgs = { sale: 'تم حفظ فاتورة البيع ✅', purchase: 'تم حفظ فاتورة الشراء ✅', sale_return: 'تم حفظ مرتجع البيع ✅', purchase_return: 'تم حفظ مرتجع الشراء ✅' };
         showToast(msgs[type] || 'تم الحفظ ✅');
         closeModal('invoice-modal');
         setTimeout(() => viewInvoice(invRef.id), 400);
     } catch (err) {
-        console.error(err);
         showToast('فشل الحفظ: ' + err.message, 'error');
     } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'حفظ الفاتورة';
+        submitBtn.disabled = false; submitBtn.textContent = 'حفظ الفاتورة';
     }
 });
 
-// ============ Render Invoices ============
 function renderInvoices() {
     const tbody = $('invoices-table-body');
     const search = ($('invoice-search')?.value || '').toLowerCase();
     const typeFilter = $('invoice-type-filter')?.value || 'all';
     const dateFilter = $('invoice-date-filter')?.value || '';
-
     let list = invoices;
-    if (search) list = list.filter(i =>
-        (i.number || '').toLowerCase().includes(search) ||
-        (i.partyName || '').toLowerCase().includes(search)
-    );
+    if (search) list = list.filter(i => (i.number || '').toLowerCase().includes(search) || (i.partyName || '').toLowerCase().includes(search));
     if (typeFilter !== 'all') list = list.filter(i => i.type === typeFilter);
     if (dateFilter) list = list.filter(i => i.date === dateFilter);
-
     if (list.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-gray-400">لا توجد فواتير</td></tr>`; return; }
-
-    const typeLabels = {
-        sale: 'بيع',
-        purchase: 'شراء',
-        sale_return: '↩️ مرتجع بيع',
-        purchase_return: '↩️ مرتجع شراء'
-    };
-    const typeColors = {
-        sale: 'bg-blue-100 text-blue-700',
-        purchase: 'bg-orange-100 text-orange-700',
-        sale_return: 'bg-red-100 text-red-700',
-        purchase_return: 'bg-purple-100 text-purple-700'
-    };
-
+    const typeLabels = { sale: 'بيع', purchase: 'شراء', sale_return: '↩️ مرتجع بيع', purchase_return: '↩️ مرتجع شراء' };
+    const typeColors = { sale: 'bg-blue-100 text-blue-700', purchase: 'bg-orange-100 text-orange-700', sale_return: 'bg-red-100 text-red-700', purchase_return: 'bg-purple-100 text-purple-700' };
     tbody.innerHTML = list.map(inv => {
         const isReturn = inv.type === 'sale_return' || inv.type === 'purchase_return';
         return `
         <tr class="border-b hover:bg-gray-50 ${isReturn ? 'bg-red-50/30' : ''}">
             <td class="p-3 text-sm font-mono">${escapeHtml(inv.number || '-')}</td>
             <td class="p-3"><span class="text-xs px-2 py-1 rounded ${typeColors[inv.type] || 'bg-gray-100'}">${typeLabels[inv.type] || inv.type}</span></td>
-            <td class="p-3 font-semibold">
-                ${escapeHtml(inv.partyName || '-')}
-                ${isReturn && inv.originalInvoiceNumber ? `<div class="text-xs text-gray-500">أصل: #${escapeHtml(inv.originalInvoiceNumber)}</div>` : ''}
-            </td>
+            <td class="p-3 font-semibold">${escapeHtml(inv.partyName || '-')}${isReturn && inv.originalInvoiceNumber ? `<div class="text-xs text-gray-500">أصل: #${escapeHtml(inv.originalInvoiceNumber)}</div>` : ''}</td>
             <td class="p-3 font-bold ${isReturn ? 'text-red-600' : ''}">${formatMoney(inv.total)}</td>
             <td class="p-3 text-green-600">${formatMoney(inv.paid)}</td>
             <td class="p-3 ${inv.remaining > 0 ? 'text-red-600 font-bold' : 'text-gray-400'}">${formatMoney(inv.remaining)}</td>
@@ -1785,16 +2143,10 @@ function renderInvoices() {
 function viewInvoice(id) {
     const inv = invoices.find(i => i.id === id);
     if (!inv) return;
-    const typeLabels = {
-        sale: 'فاتورة بيع',
-        purchase: 'فاتورة شراء',
-        sale_return: 'مرتجع بيع',
-        purchase_return: 'مرتجع شراء'
-    };
+    const typeLabels = { sale: 'فاتورة بيع', purchase: 'فاتورة شراء', sale_return: 'مرتجع بيع', purchase_return: 'مرتجع شراء' };
     const isReturn = inv.type === 'sale_return' || inv.type === 'purchase_return';
     const partyLabel = (inv.type === 'sale' || inv.type === 'sale_return') ? 'العميل' : 'المورد';
     const headerColor = isReturn ? 'text-red-700' : 'text-blue-700';
-
     const html = `
         <div class="space-y-4">
             <div class="flex justify-between items-start border-b pb-3">
@@ -1809,11 +2161,7 @@ function viewInvoice(id) {
                     <p class="text-sm text-gray-600">${inv.date}</p>
                 </div>
             </div>
-            ${isReturn && inv.originalInvoiceNumber ? `
-                <div class="bg-red-50 p-3 rounded-lg border border-red-200">
-                    <p class="text-sm text-red-800"><strong>↩️ مرتبط بالفاتورة الأصلية:</strong> #${escapeHtml(inv.originalInvoiceNumber)}</p>
-                </div>
-            ` : ''}
+            ${isReturn && inv.originalInvoiceNumber ? `<div class="bg-red-50 p-3 rounded-lg border border-red-200"><p class="text-sm text-red-800"><strong>↩️ مرتبط بالأصلية:</strong> #${escapeHtml(inv.originalInvoiceNumber)}</p></div>` : ''}
             <div class="grid grid-cols-2 gap-3 text-sm">
                 <div><strong>${partyLabel}:</strong> ${escapeHtml(inv.partyName)}</div>
                 <div><strong>طريقة الدفع:</strong> ${{cash:'نقدي', credit:'آجل', partial:'جزئي'}[inv.paymentMethod] || '-'}</div>
@@ -1847,8 +2195,7 @@ function viewInvoice(id) {
             </div>
             ${inv.notes ? `<div class="bg-gray-50 p-3 rounded text-sm"><strong>ملاحظات:</strong> ${escapeHtml(inv.notes)}</div>` : ''}
             <div class="text-center text-xs text-gray-400 pt-3 border-t">شكراً لتعاملكم معنا</div>
-        </div>
-    `;
+        </div>`;
     $('invoice-print-area').innerHTML = html;
     openModal('invoice-view-modal');
 }
@@ -1856,7 +2203,7 @@ function viewInvoice(id) {
 function printInvoice() {
     const content = $('invoice-print-area').innerHTML;
     const win = window.open('', '', 'width=800,height=600');
-    win.document.write(`<html dir="rtl"><head><title>طباعة فاتورة</title><style>body{font-family:'Cairo',Tahoma,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px;text-align:right;font-size:12px}th{background:#f3f4f6}h2{margin:0}.text-center{text-align:center}.font-bold{font-weight:bold}</style></head><body>${content}</body></html>`);
+    win.document.write(`<html dir="rtl"><head><title>طباعة</title><style>body{font-family:'Cairo',Tahoma,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px;text-align:right;font-size:12px}th{background:#f3f4f6}h2{margin:0}</style></head><body>${content}</body></html>`);
     win.document.close();
     setTimeout(() => win.print(), 400);
 }
@@ -1884,10 +2231,9 @@ $('expense-form').addEventListener('submit', async (e) => {
         category: $('exp-category').value,
         description: $('exp-desc').value.trim(),
         amount: parseFloat($('exp-amount').value) || 0,
-        ownerId: currentUser.uid,
-        updatedAt: serverTimestamp()
+        ownerId: currentUser.uid, updatedAt: serverTimestamp()
     };
-    if (data.amount <= 0) { showToast('المبلغ يجب أن يكون أكبر من 0', 'error'); return; }
+    if (data.amount <= 0) { showToast('المبلغ > 0', 'error'); return; }
     try {
         if (id) { await updateDoc(doc(db, 'expenses', id), data); showToast('تم التعديل ✅'); }
         else { data.createdAt = serverTimestamp(); await addDoc(collection(db, 'expenses'), data); showToast('تمت الإضافة ✅'); }
@@ -1925,16 +2271,13 @@ function openPaymentModal(partyType, partyId) {
     const arr = partyType === 'customer' ? customers : suppliers;
     const party = arr.find(p => p.id === partyId);
     if (!party) { showToast('الجهة غير موجودة', 'error'); return; }
-
     $('payment-form').reset();
     $('pay-party-id').value = partyId;
     $('pay-party-type').value = partyType;
     $('pay-party-name').textContent = party.name;
     $('pay-current-balance').textContent = formatMoney(party.balance || 0) + ' ' + settings.currency;
     $('pay-direction').value = partyType === 'customer' ? 'in' : 'out';
-    $('payment-modal-title').textContent = partyType === 'customer'
-        ? `💵 تحصيل دفعة من ${party.name}`
-        : `💸 سداد دفعة لـ ${party.name}`;
+    $('payment-modal-title').textContent = partyType === 'customer' ? `💵 تحصيل من ${party.name}` : `💸 سداد لـ ${party.name}`;
     openModal('payment-modal');
 }
 
@@ -1943,52 +2286,39 @@ $('payment-form').addEventListener('submit', async (e) => {
     const partyId = $('pay-party-id').value;
     const partyType = $('pay-party-type').value;
     const amount = parseFloat($('pay-amount').value) || 0;
-    if (amount <= 0) { showToast('المبلغ يجب أن يكون أكبر من 0', 'error'); return; }
-
+    if (amount <= 0) { showToast('المبلغ > 0', 'error'); return; }
     const arr = partyType === 'customer' ? customers : suppliers;
     const party = arr.find(p => p.id === partyId);
     if (!party) { showToast('الجهة غير موجودة', 'error'); return; }
-
     const paymentData = {
         partyId, partyType, partyName: party.name, amount,
         direction: $('pay-direction').value,
         method: $('pay-method').value,
         notes: $('pay-notes').value.trim(),
         date: new Date().toISOString().slice(0, 10),
-        ownerId: currentUser.uid,
-        createdAt: serverTimestamp()
+        ownerId: currentUser.uid, createdAt: serverTimestamp()
     };
-
     const submitBtn = e.target.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'جارٍ...';
-
+    submitBtn.disabled = true; submitBtn.textContent = 'جارٍ...';
     try {
         await addDoc(collection(db, 'payments'), paymentData);
-        await updateDoc(
-            doc(db, partyType === 'customer' ? 'customers' : 'suppliers', partyId),
-            { balance: (party.balance || 0) - amount }
-        );
-        showToast(`تم تسجيل دفعة ${formatMoney(amount)} ${settings.currency} ✅`);
+        await updateDoc(doc(db, partyType === 'customer' ? 'customers' : 'suppliers', partyId), { balance: (party.balance || 0) - amount });
+        showToast(`✅ تم تسجيل دفعة ${formatMoney(amount)}`, 'success');
         closeModal('payment-modal');
         if (!$('statement-modal').classList.contains('hidden')) {
             setTimeout(() => openStatement(partyType, partyId), 300);
         }
     } catch (err) {
-        console.error(err);
-        showToast('فشل الحفظ: ' + err.message, 'error');
+        showToast('فشل: ' + err.message, 'error');
     } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'حفظ الدفعة';
+        submitBtn.disabled = false; submitBtn.textContent = 'حفظ الدفعة';
     }
 });
 
-// ============ Statement ============
 function openStatement(partyType, partyId) {
     const arr = partyType === 'customer' ? customers : suppliers;
     const party = arr.find(p => p.id === partyId);
     if (!party) { showToast('الجهة غير موجودة', 'error'); return; }
-
     const movements = [];
     const openingBalance = party.openingBalance || 0;
     if (openingBalance !== 0) {
@@ -1997,15 +2327,12 @@ function openStatement(partyType, partyId) {
             description: 'رصيد افتتاحي',
             debit: partyType === 'customer' ? openingBalance : 0,
             credit: partyType === 'supplier' ? openingBalance : 0,
-            sortKey: 0,
-            createdAt: 0
+            sortKey: 0, createdAt: 0
         });
     }
-
     invoices.forEach(inv => {
         if (inv.partyId !== partyId) return;
         let debit = 0, credit = 0, desc = '';
-
         if (partyType === 'customer') {
             if (inv.type === 'sale') { debit = inv.total; desc = `فاتورة بيع #${inv.number}`; }
             else if (inv.type === 'sale_return') { credit = inv.total; desc = `↩️ مرتجع بيع #${inv.number}`; }
@@ -2013,7 +2340,6 @@ function openStatement(partyType, partyId) {
             if (inv.type === 'purchase') { credit = inv.total; desc = `فاتورة شراء #${inv.number}`; }
             else if (inv.type === 'purchase_return') { debit = inv.total; desc = `↩️ مرتجع شراء #${inv.number}`; }
         }
-
         if (debit || credit) {
             movements.push({
                 date: inv.date || formatDate(inv.createdAt),
@@ -2022,11 +2348,10 @@ function openStatement(partyType, partyId) {
                 createdAt: inv.createdAt?.toDate?.()?.getTime() || 0
             });
         }
-
         if (inv.paid > 0) {
             movements.push({
                 date: inv.date || formatDate(inv.createdAt),
-                description: `💵 دفعة مسددة مع الفاتورة #${inv.number}`,
+                description: `💵 دفعة مع الفاتورة #${inv.number}`,
                 debit: (partyType === 'supplier' && inv.type === 'purchase') || (partyType === 'customer' && inv.type === 'sale_return') ? inv.paid : 0,
                 credit: (partyType === 'customer' && inv.type === 'sale') || (partyType === 'supplier' && inv.type === 'purchase_return') ? inv.paid : 0,
                 sortKey: new Date(inv.date || inv.createdAt?.toDate?.() || Date.now()).getTime() + 1,
@@ -2034,7 +2359,6 @@ function openStatement(partyType, partyId) {
             });
         }
     });
-
     payments.forEach(pay => {
         if (pay.partyId !== partyId) return;
         movements.push({
@@ -2046,20 +2370,16 @@ function openStatement(partyType, partyId) {
             createdAt: pay.createdAt?.toDate?.()?.getTime() || 0
         });
     });
-
     movements.sort((a, b) => a.sortKey - b.sortKey || a.createdAt - b.createdAt);
     let running = 0;
     movements.forEach(m => { running += (m.debit || 0) - (m.credit || 0); m.running = running; });
-
     const totalDebit = movements.reduce((s, m) => s + (m.debit || 0), 0);
     const totalCredit = movements.reduce((s, m) => s + (m.credit || 0), 0);
     const finalBalance = running;
-
     const typeLabel = partyType === 'customer' ? 'عميل' : 'مورد';
     const balanceLabel = partyType === 'customer'
         ? (finalBalance > 0 ? 'مدين لك' : finalBalance < 0 ? 'دائن له' : 'متوازن')
         : (finalBalance > 0 ? 'أنت مدين له' : finalBalance < 0 ? 'دائن لك' : 'متوازن');
-
     const html = `
         <div class="space-y-4">
             <div class="flex justify-between items-start border-b pb-3">
@@ -2117,8 +2437,7 @@ function openStatement(partyType, partyId) {
             </div>
             ${party.notes ? `<div class="bg-yellow-50 p-3 rounded text-sm"><strong>ملاحظات:</strong> ${escapeHtml(party.notes)}</div>` : ''}
             <div class="text-center text-xs text-gray-400 pt-3 border-t">نظام مخزن — ${new Date().toLocaleDateString('ar-EG')}</div>
-        </div>
-    `;
+        </div>`;
     $('statement-title').textContent = `كشف حساب: ${party.name}`;
     $('statement-print-area').innerHTML = html;
     $('statement-print-area').dataset.partyType = partyType;
@@ -2137,12 +2456,12 @@ function openPaymentModalFromStatement() {
 function printStatement() {
     const content = $('statement-print-area').innerHTML;
     const win = window.open('', '', 'width=900,height=700');
-    win.document.write(`<html dir="rtl"><head><title>كشف حساب</title><style>body{font-family:'Cairo',Tahoma,sans-serif;padding:20px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border:1px solid #ddd;padding:6px;text-align:right;font-size:12px}th{background:#f3f4f6}h2{margin:0}.text-center{text-align:center}.font-bold{font-weight:bold}.text-red-600{color:#dc2626}.text-green-600{color:#16a34a}.bg-gray-50{background:#f9fafb;padding:10px;border-radius:5px;margin:10px 0}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}</style></head><body>${content}</body></html>`);
+    win.document.write(`<html dir="rtl"><head><title>كشف</title><style>body{font-family:'Cairo',Tahoma,sans-serif;padding:20px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border:1px solid #ddd;padding:6px;text-align:right;font-size:12px}th{background:#f3f4f6}</style></head><body>${content}</body></html>`);
     win.document.close();
     setTimeout(() => win.print(), 400);
 }
 
-// ============ Dashboard ============
+// ============ Dashboard & Reports ============
 function renderDashboard() {
     const today = new Date().toISOString().slice(0, 10);
     const todaySales = invoices.filter(i => i.type === 'sale' && i.date === today).reduce((s, i) => s + (i.total || 0), 0);
@@ -2152,40 +2471,29 @@ function renderDashboard() {
     $('dash-low-stock').textContent = lowStock.length;
     const debt = customers.reduce((s, c) => s + Math.max(0, c.balance || 0), 0);
     $('dash-customers-debt').textContent = formatMoney(debt);
-
     const lowList = $('dash-low-stock-list');
-    if (lowStock.length === 0) {
-        lowList.innerHTML = '<p class="text-sm text-gray-400 text-center py-3">لا توجد أصناف منخفضة ✅</p>';
-    } else {
-        lowList.innerHTML = lowStock.slice(0, 10).map(p => `
-            <div class="flex justify-between items-center p-2 bg-red-50 rounded-lg">
-                <span class="text-sm font-semibold">${escapeHtml(p.name)}</span>
-                <span class="text-xs bg-red-600 text-white px-2 py-1 rounded">${p.qty} متبقي</span>
-            </div>
-        `).join('');
-    }
-
+    if (lowStock.length === 0) lowList.innerHTML = '<p class="text-sm text-gray-400 text-center py-3">لا توجد أصناف منخفضة ✅</p>';
+    else lowList.innerHTML = lowStock.slice(0, 10).map(p => `
+        <div class="flex justify-between items-center p-2 bg-red-50 rounded-lg">
+            <span class="text-sm font-semibold">${escapeHtml(p.name)}</span>
+            <span class="text-xs bg-red-600 text-white px-2 py-1 rounded">${p.qty} متبقي</span>
+        </div>`).join('');
     const recent = $('dash-recent-invoices');
     const recentList = invoices.slice(0, 8);
-    if (recentList.length === 0) {
-        recent.innerHTML = '<p class="text-sm text-gray-400 text-center py-3">لا توجد فواتير بعد</p>';
-    } else {
-        recent.innerHTML = recentList.map(i => `
-            <div class="flex justify-between items-center p-2 border-b last:border-0 cursor-pointer hover:bg-gray-50" onclick="viewInvoice('${i.id}')">
-                <div>
-                    <p class="text-sm font-semibold">${escapeHtml(i.partyName)}</p>
-                    <p class="text-xs text-gray-500 font-mono">${escapeHtml(i.number)}</p>
-                </div>
-                <div class="text-left">
-                    <p class="text-sm font-bold">${formatMoney(i.total)}</p>
-                    <p class="text-xs text-gray-500">${i.date || formatDate(i.createdAt)}</p>
-                </div>
+    if (recentList.length === 0) recent.innerHTML = '<p class="text-sm text-gray-400 text-center py-3">لا توجد فواتير بعد</p>';
+    else recent.innerHTML = recentList.map(i => `
+        <div class="flex justify-between items-center p-2 border-b last:border-0 cursor-pointer hover:bg-gray-50" onclick="viewInvoice('${i.id}')">
+            <div>
+                <p class="text-sm font-semibold">${escapeHtml(i.partyName)}</p>
+                <p class="text-xs text-gray-500 font-mono">${escapeHtml(i.number)}</p>
             </div>
-        `).join('');
-    }
+            <div class="text-left">
+                <p class="text-sm font-bold">${formatMoney(i.total)}</p>
+                <p class="text-xs text-gray-500">${i.date || formatDate(i.createdAt)}</p>
+            </div>
+        </div>`).join('');
 }
 
-// ============ Reports ============
 function renderReportsLive() {
     const reportsTab = $('tab-reports');
     if (!reportsTab || reportsTab.classList.contains('hidden')) return;
@@ -2201,18 +2509,15 @@ function generateReport() {
         if (to && dateStr > to) return false;
         return true;
     };
-
     const filteredInvoices = invoices.filter(i => inRange(i.date || ''));
     const filteredExpenses = expenses.filter(e => inRange(dateKey(e.createdAt)));
 
     const grossSales = filteredInvoices.filter(i => i.type === 'sale').reduce((s, i) => s + i.total, 0);
     const salesReturns = filteredInvoices.filter(i => i.type === 'sale_return').reduce((s, i) => s + i.total, 0);
     const salesTotal = grossSales - salesReturns;
-
     const grossPurchases = filteredInvoices.filter(i => i.type === 'purchase').reduce((s, i) => s + i.total, 0);
     const purchaseReturns = filteredInvoices.filter(i => i.type === 'purchase_return').reduce((s, i) => s + i.total, 0);
     const purchasesTotal = grossPurchases - purchaseReturns;
-
     const expensesTotal = filteredExpenses.reduce((s, e) => s + e.amount, 0);
 
     let cogs = 0;
@@ -2222,16 +2527,10 @@ function generateReport() {
     filteredInvoices.filter(i => i.type === 'sale_return').forEach(inv => {
         (inv.items || []).forEach(it => { cogs -= (it.costPrice || 0) * it.qty; });
     });
-
     let cogsSource = 'actual';
-    if (cogs === 0 && salesTotal > 0) {
-        cogs = salesTotal * 0.7;
-        cogsSource = 'estimated';
-    }
-
+    if (cogs === 0 && salesTotal > 0) { cogs = salesTotal * 0.7; cogsSource = 'estimated'; }
     const profit = salesTotal - cogs - expensesTotal;
     const profitMargin = salesTotal > 0 ? (profit / salesTotal * 100) : 0;
-
     const salesInvoices = filteredInvoices.filter(i => i.type === 'sale');
 
     $('rep-sales').textContent = formatMoney(salesTotal) + ' ' + settings.currency;
@@ -2242,51 +2541,36 @@ function generateReport() {
     const profitEl = $('rep-profit');
     const profitParent = profitEl.parentElement;
     let badge = profitParent.querySelector('.profit-badge');
-    if (!badge) {
-        badge = document.createElement('p');
-        badge.className = 'profit-badge text-xs mt-1';
-        profitParent.appendChild(badge);
-    }
+    if (!badge) { badge = document.createElement('p'); badge.className = 'profit-badge text-xs mt-1'; profitParent.appendChild(badge); }
     if (cogsSource === 'estimated') {
         badge.className = 'profit-badge text-xs mt-1 text-yellow-600';
-        badge.textContent = `⚠️ تقديري (هامش 30%) — حدّد أسعار التكلفة`;
+        badge.textContent = `⚠️ تقديري (هامش 30%)`;
     } else {
         badge.className = 'profit-badge text-xs mt-1 ' + (profitMargin >= 0 ? 'text-green-600' : 'text-red-600');
         badge.textContent = `هامش الربح: ${profitMargin.toFixed(1)}%`;
     }
-
     $('rep-invoices-count').textContent = filteredInvoices.length;
     $('rep-avg-invoice').textContent = formatMoney(salesInvoices.length ? salesTotal / salesInvoices.length : 0) + ' ' + settings.currency;
 
     const itemMap = new Map();
     const salesReturnInvoices = filteredInvoices.filter(i => i.type === 'sale_return');
-
     salesInvoices.forEach(inv => {
         (inv.items || []).forEach(it => {
             if (!itemMap.has(it.productId)) itemMap.set(it.productId, { name: it.name, qty: 0, revenue: 0, profit: 0 });
             const d = itemMap.get(it.productId);
             const cost = it.costPrice || it.price * 0.7;
-            d.qty += it.qty;
-            d.revenue += it.total;
-            d.profit += (it.price - cost) * it.qty;
+            d.qty += it.qty; d.revenue += it.total; d.profit += (it.price - cost) * it.qty;
         });
     });
-
     salesReturnInvoices.forEach(inv => {
         (inv.items || []).forEach(it => {
             if (!itemMap.has(it.productId)) itemMap.set(it.productId, { name: it.name, qty: 0, revenue: 0, profit: 0 });
             const d = itemMap.get(it.productId);
             const cost = it.costPrice || it.price * 0.7;
-            d.qty -= it.qty;
-            d.revenue -= it.total;
-            d.profit -= (it.price - cost) * it.qty;
+            d.qty -= it.qty; d.revenue -= it.total; d.profit -= (it.price - cost) * it.qty;
         });
     });
-
-    const top = Array.from(itemMap.values())
-        .filter(t => t.qty > 0)
-        .sort((a, b) => b.qty - a.qty)
-        .slice(0, 15);
+    const top = Array.from(itemMap.values()).filter(t => t.qty > 0).sort((a, b) => b.qty - a.qty).slice(0, 15);
     $('top-products-body').innerHTML = top.length === 0
         ? `<tr><td colspan="4" class="p-6 text-center text-gray-400">لا توجد بيانات</td></tr>`
         : top.map(t => `
@@ -2295,13 +2579,10 @@ function generateReport() {
                 <td class="p-3 font-bold">${t.qty}</td>
                 <td class="p-3 text-green-600">${formatMoney(t.revenue)}</td>
                 <td class="p-3 ${t.profit >= 0 ? 'text-blue-600' : 'text-red-600'} font-semibold">${formatMoney(t.profit)}</td>
-            </tr>
-        `).join('');
+            </tr>`).join('');
 }
 
-// ============================================================
-// 💾 قسم النسخ الاحتياطي والاستعادة
-// ============================================================
+// ============ Backup ============
 function renderBackupStats() {
     $('bk-count-products').textContent = products.length;
     $('bk-count-customers').textContent = customers.length;
@@ -2309,516 +2590,197 @@ function renderBackupStats() {
     $('bk-count-invoices').textContent = invoices.length;
     $('bk-count-payments').textContent = payments.length;
     $('bk-count-expenses').textContent = expenses.length;
-
     if (currentUser) {
         $('bk-account-email').textContent = currentUser.email || '-';
         $('bk-account-uid').textContent = currentUser.uid || '-';
         $('bk-account-store').textContent = settings.storeName || 'متجري';
     }
-
     const lastBackup = localStorage.getItem('lastBackupDate');
-    if (lastBackup) {
-        $('bk-last-backup').textContent = lastBackup;
-    }
+    if (lastBackup) $('bk-last-backup').textContent = lastBackup;
 }
 
 async function exportBackup() {
-    if (!currentUser) { showToast('يجب تسجيل الدخول', 'error'); return; }
-
+    if (!currentUser) { showToast('سجل دخول', 'error'); return; }
     const btn = event?.target;
-    if (btn) { btn.disabled = true; btn.textContent = 'جارٍ التصدير...'; }
-
+    if (btn) { btn.disabled = true; btn.textContent = 'جارٍ...'; }
     try {
-        showToast('جارٍ تجميع البيانات...', 'info');
-
+        showToast('جارٍ التجميع...', 'info');
         const backup = {
-            _meta: {
-                ownerEmail: currentUser.email,
-                ownerId: currentUser.uid,
-                exportedAt: new Date().toISOString(),
-                version: '2.0',
-                app: 'تطبيق مخزن احترافي',
-                storeName: settings.storeName || ''
-            },
+            _meta: { ownerEmail: currentUser.email, ownerId: currentUser.uid, exportedAt: new Date().toISOString(), version: '2.0', storeName: settings.storeName || '' },
             _stats: {}
         };
-
         const collections = ['products', 'customers', 'suppliers', 'invoices', 'payments', 'expenses'];
         const dataMap = { products, customers, suppliers, invoices, payments, expenses };
-
         for (const coll of collections) {
             backup[coll] = dataMap[coll].map(item => {
                 const clean = {};
                 for (const [key, val] of Object.entries(item)) {
-                    if (val && typeof val === 'object' && val.toDate) {
-                        clean[key] = { __type: 'timestamp', value: val.toDate().toISOString() };
-                    } else {
-                        clean[key] = val;
-                    }
+                    if (val && typeof val === 'object' && val.toDate) clean[key] = { __type: 'timestamp', value: val.toDate().toISOString() };
+                    else clean[key] = val;
                 }
                 return clean;
             });
             backup._stats[coll] = backup[coll].length;
         }
-
         backup.settings = { ...settings };
         backup._stats.settings = 1;
-
         const total = Object.values(backup._stats).reduce((a, b) => a + b, 0);
-
-        const filename = `backup-${(currentUser.email || 'user').replace(/[@.]/g, '_')}-${new Date().toISOString().slice(0, 10)}-${Date.now().toString().slice(-4)}.json`;
+        const filename = `backup-${(currentUser.email || 'user').replace(/[@.]/g, '_')}-${new Date().toISOString().slice(0, 10)}.json`;
         const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
         URL.revokeObjectURL(url);
-
-        const now = new Date().toLocaleString('ar-EG');
-        localStorage.setItem('lastBackupDate', now);
+        localStorage.setItem('lastBackupDate', new Date().toLocaleString('ar-EG'));
         renderBackupStats();
-
-        showToast(`✅ تم تصدير ${total} مستند بنجاح`, 'success');
+        showToast(`✅ تم تصدير ${total} مستند`, 'success');
     } catch (err) {
-        console.error(err);
-        showToast('فشل التصدير: ' + err.message, 'error');
+        showToast('فشل: ' + err.message, 'error');
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'تصدير الآن'; }
     }
 }
 
 async function importBackup() {
-    if (!currentUser) { showToast('يجب تسجيل الدخول', 'error'); return; }
-
+    if (!currentUser) { showToast('سجل دخول', 'error'); return; }
     const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = '.json,application/json';
-
+    fileInput.type = 'file'; fileInput.accept = '.json,application/json';
     fileInput.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
         let backup;
-        try {
-            const text = await file.text();
-            backup = JSON.parse(text);
-        } catch (err) {
-            showToast('فشل قراءة الملف: ' + err.message, 'error');
-            return;
-        }
-
+        try { backup = JSON.parse(await file.text()); }
+        catch (err) { showToast('فشل قراءة الملف', 'error'); return; }
         const collections = ['products', 'customers', 'suppliers', 'invoices', 'payments', 'expenses'];
         let totalDocs = 0;
         const stats = {};
         for (const coll of collections) {
             const count = Array.isArray(backup[coll]) ? backup[coll].length : 0;
-            stats[coll] = count;
-            totalDocs += count;
+            stats[coll] = count; totalDocs += count;
         }
-
-        if (totalDocs === 0) {
-            showToast('الملف فارغ', 'error');
-            return;
-        }
-
+        if (totalDocs === 0) { showToast('الملف فارغ', 'error'); return; }
         const ownerEmail = backup._meta?.ownerEmail || 'غير معروف';
-        const exportedAt = backup._meta?.exportedAt ? new Date(backup._meta.exportedAt).toLocaleString('ar-EG') : 'غير معروف';
-
-        const msg =
-            `📂 معلومات النسخة:\n\n` +
-            `👤 من حساب: ${ownerEmail}\n` +
-            `📅 تاريخ: ${exportedAt}\n\n` +
-            `📊 المحتوى:\n` +
-            Object.entries(stats).filter(([_, c]) => c > 0).map(([k, c]) => `   • ${k}: ${c}`).join('\n') +
-            `\n\n⚠️ سيتم إضافة ${totalDocs} مستند إلى حسابك الحالي.\n` +
-            `✅ سيتم الاحتفاظ بالـ IDs الأصلية (لن ينكسر الربط)\n` +
-            `هل أنت متأكد؟`;
-
-        if (!confirm(msg)) return;
-
-        const totalSteps = Object.values(stats).filter(c => c > 0).length;
-        let currentStep = 0;
-        showToast(`جارٍ الاستيراد (0/${totalSteps})...`, 'info');
-
-        let grandSuccess = 0;
-        let grandFailed = 0;
-
+        if (!confirm(`📂 من: ${ownerEmail}\n📊 سيتم إضافة ${totalDocs} مستند\n\nمتابعة؟`)) return;
+        showToast('جارٍ الاستيراد...', 'info');
+        let grandSuccess = 0, grandFailed = 0;
         for (const collName of collections) {
             const items = backup[collName];
             if (!Array.isArray(items) || items.length === 0) continue;
-
-            currentStep++;
-            let success = 0;
-            let failed = 0;
-
+            let success = 0, failed = 0;
             for (const item of items) {
                 try {
                     const data = { ...item };
                     const originalId = data.id;
                     delete data.id;
-
                     for (const [key, val] of Object.entries(data)) {
-                        if (val && typeof val === 'object' && val.__type === 'timestamp') {
-                            data[key] = new Date(val.value);
-                        }
+                        if (val && typeof val === 'object' && val.__type === 'timestamp') data[key] = new Date(val.value);
                     }
-
                     data.ownerId = currentUser.uid;
-
-                    if (originalId) {
-                        await setDoc(doc(db, collName, originalId), data);
-                    } else {
-                        await addDoc(collection(db, collName), data);
-                    }
+                    if (originalId) await setDoc(doc(db, collName, originalId), data);
+                    else await addDoc(collection(db, collName), data);
                     success++;
-                } catch (err) {
-                    console.warn(`فشل استيراد من ${collName}:`, err);
-                    failed++;
-                }
+                } catch (err) { console.warn('fail:', err); failed++; }
             }
-
-            grandSuccess += success;
-            grandFailed += failed;
-            showToast(`استيراد ${collName}: ${success}/${items.length}`, 'info');
+            grandSuccess += success; grandFailed += failed;
         }
-
         if (backup.settings) {
             try {
                 const data = { ...backup.settings };
                 delete data.ownerId;
                 for (const [key, val] of Object.entries(data)) {
-                    if (val && typeof val === 'object' && val.__type === 'timestamp') {
-                        data[key] = new Date(val.value);
-                    }
+                    if (val && typeof val === 'object' && val.__type === 'timestamp') data[key] = new Date(val.value);
                 }
                 data.ownerId = currentUser.uid;
                 await setDoc(doc(db, 'settings', currentUser.uid), data, { merge: true });
-                showToast('تم استيراد الإعدادات', 'info');
-            } catch (err) {
-                console.warn('فشل استيراد الإعدادات:', err);
-            }
+            } catch (err) {}
         }
-
-        showToast(`✅ تم استيراد ${grandSuccess} مستند${grandFailed > 0 ? ` (فشل: ${grandFailed})` : ''}`, 'success');
-
-        setTimeout(() => {
-            if (confirm('تم الاستيراد بنجاح!\n\nهل تريد إعادة تحميل الصفحة لرؤية البيانات؟')) {
-                location.reload();
-            }
-        }, 800);
+        showToast(`✅ تم استيراد ${grandSuccess}${grandFailed > 0 ? ` (فشل: ${grandFailed})` : ''}`, 'success');
+        setTimeout(() => { if (confirm('تم الاستيراد. إعادة تحميل الصفحة؟')) location.reload(); }, 800);
     };
-
     fileInput.click();
 }
 
 async function deleteAllData() {
-    if (!currentUser) { showToast('يجب تسجيل الدخول', 'error'); return; }
-
+    if (!currentUser) return;
     const collections = ['products', 'customers', 'suppliers', 'invoices', 'payments', 'expenses'];
-    const total = products.length + customers.length + suppliers.length +
-                  invoices.length + payments.length + expenses.length;
-
-    if (total === 0) {
-        showToast('لا يوجد بيانات للحذف', 'warn');
-        return;
-    }
-
-    const msg =
-        `⚠️⚠️⚠️ تحذير ⚠️⚠️⚠️\n\n` +
-        `سيتم حذف ${total} مستند نهائياً:\n\n` +
-        `📦 أصناف: ${products.length}\n` +
-        `👥 عملاء: ${customers.length}\n` +
-        `🚚 موردين: ${suppliers.length}\n` +
-        `🧾 فواتير: ${invoices.length}\n` +
-        `💰 دفعات: ${payments.length}\n` +
-        `💸 مصروفات: ${expenses.length}\n\n` +
-        `❌ لا يمكن التراجع!\n\n` +
-        `هل أنت متأكد تماماً؟`;
-
-    if (!confirm(msg)) return;
-    if (!confirm('تأكيد أخير: هل تريد المتابعة؟')) return;
-
+    const total = products.length + customers.length + suppliers.length + invoices.length + payments.length + expenses.length;
+    if (total === 0) { showToast('لا يوجد بيانات', 'warn'); return; }
+    if (!confirm(`⚠️ حذف ${total} مستند نهائياً. متأكد؟`)) return;
+    if (!confirm('تأكيد أخير؟')) return;
     showToast('جارٍ الحذف...', 'info');
-
-    let totalDeleted = 0;
+    let deleted = 0;
     for (const collName of collections) {
         try {
             const snap = await getDocs(query(collection(db, collName), where('ownerId', '==', currentUser.uid)));
             for (const d of snap.docs) {
-                try {
-                    await deleteDoc(doc(db, collName, d.id));
-                    totalDeleted++;
-                } catch (err) {
-                    console.warn(`فشل حذف ${d.id}:`, err);
-                }
+                try { await deleteDoc(doc(db, collName, d.id)); deleted++; }
+                catch (err) {}
             }
-        } catch (err) {
-            console.warn(`فشل حذف من ${collName}:`, err);
-        }
+        } catch (err) {}
     }
-
-    showToast(`✅ تم حذف ${totalDeleted} مستند`, 'success');
-
-    setTimeout(() => {
-        if (confirm('تم الحذف بنجاح.\n\nهل تريد إعادة تحميل الصفحة؟')) {
-            location.reload();
-        }
-    }, 800);
+    showToast(`✅ حذف ${deleted}`, 'success');
+    setTimeout(() => { if (confirm('تم. إعادة تحميل؟')) location.reload(); }, 800);
 }
 
-// ============================================================
-// 🔍 نظام الباركود والكاميرا والاختصارات (تحديث سوبر ماركت)
-// ============================================================
-let html5QrCode = null;
-
-function findProductByBarcode(code) {
-    if (!code) return null;
-    const clean = String(code).trim().toLowerCase();
-    return products.find(p =>
-        (p.sku || '').toLowerCase() === clean ||
-        (p.barcode || '').toLowerCase() === clean
-    );
-}
-
-function addProductByBarcode(code) {
-    const type = $('inv-type').value;
-    if (!type) {
-        showToast('افتح فاتورة أولاً', 'warn');
-        return false;
-    }
-
-    const product = findProductByBarcode(code);
-    if (!product) {
-        showToast(`❌ لا يوجد صنف بالباركود: ${code}`, 'error');
-        return false;
-    }
-
-    if (type === 'sale' && product.qty <= 0) {
-        showToast(`⚠️ الصنف "${product.name}" نفد من المخزون`, 'warn');
-        return false;
-    }
-
-    const existingRows = document.querySelectorAll('#invoice-items-body tr');
-    for (const tr of existingRows) {
-        const select = tr.querySelector('.inv-item-product');
-        if (select && select.value === product.id) {
-            const qtyInput = tr.querySelector('.inv-item-qty');
-            const currentQty = parseFloat(qtyInput.value) || 0;
-            const newQty = currentQty + 1;
-
-            if (tr.dataset.maxQty) {
-                const max = parseFloat(tr.dataset.maxQty) || 0;
-                if (newQty > max) {
-                    showToast(`الحد الأقصى للإرجاع: ${max}`, 'warn');
-                    return false;
-                }
-            }
-
-            if (type === 'sale' && newQty > product.qty) {
-                showToast(`⚠️ المخزون المتاح: ${product.qty}`, 'warn');
-                return false;
-            }
-
-            qtyInput.value = newQty;
-            recalcInvoice();
-
-            tr.classList.add('barcode-flash');
-            setTimeout(() => tr.classList.remove('barcode-flash'), 600);
-
-            showToast(`✅ ${product.name} × ${newQty}`, 'success');
-            playBeep();
-            return true;
-        }
-    }
-
-    const priceField = (type === 'sale' || type === 'sale_return') ? 'sellPrice' : 'costPrice';
-    const emptyRow = Array.from(existingRows).find(tr => {
-        const sel = tr.querySelector('.inv-item-product');
-        return sel && !sel.value;
-    });
-
-    const rowId = 'inv-item-' + Date.now() + Math.random().toString(36).slice(2, 6);
-    const tbody = $('invoice-items-body');
-    const price = product[priceField] || 0;
-    const isSale = type === 'sale';
-
-    const tr = document.createElement('tr');
-    tr.id = rowId;
-    tr.className = 'border-b barcode-flash';
-    tr.dataset.cost = product.costPrice || 0;
-    tr.innerHTML = `
-        <td class="p-2">
-            <select class="inv-item-product w-full border rounded p-1 text-sm" onchange="onInvoiceItemProductChange('${rowId}')">
-                <option value="">اختر الصنف</option>
-                ${products.map(p => {
-                    const availableQty = isSale ? p.qty : '∞';
-                    return `<option value="${p.id}" data-price="${p[priceField] || 0}" data-cost="${p.costPrice || 0}" data-stock="${p.qty}" ${p.id === product.id ? 'selected' : ''}>${escapeHtml(p.name)} (متاح: ${availableQty})</option>`;
-                }).join('')}
-            </select>
-        </td>
-        <td class="p-2"><input type="number" class="inv-item-qty w-full border rounded p-1 text-sm" value="1" min="1" oninput="recalcInvoice()"></td>
-        <td class="p-2"><input type="number" class="inv-item-price w-full border rounded p-1 text-sm" value="${price.toFixed(2)}" min="0" step="0.01" oninput="recalcInvoice()"></td>
-        <td class="p-2 inv-item-total font-semibold">${formatMoney(price)}</td>
-        <td class="p-2"><button type="button" onclick="removeInvoiceItem('${rowId}')" class="text-red-500 hover:text-red-700 text-lg">&times;</button></td>
-    `;
-
-    if (emptyRow && !emptyRow.dataset.productId) {
-        emptyRow.replaceWith(tr);
-    } else {
-        tbody.appendChild(tr);
-    }
-
-    recalcInvoice();
-    setTimeout(() => tr.classList.remove('barcode-flash'), 600);
-    showToast(`✅ تمت إضافة: ${product.name}`, 'success');
-    playBeep();
-    return true;
-}
-
-function playBeep() {
-    try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = 1200;
-        gain.gain.value = 0.08;
-        osc.start();
-        setTimeout(() => { osc.stop(); ctx.close(); }, 90);
-    } catch (e) { /* ignore */ }
-}
-
+// ============ Keyboard Shortcuts ============
 function setupBarcodeInput() {
     const input = $('inv-barcode-input');
     if (!input) return;
-
+    input.addEventListener('input', (e) => showBarcodeSuggestions(e.target.value));
+    input.addEventListener('focus', () => { if (input.value.trim()) showBarcodeSuggestions(input.value); });
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             const code = input.value.trim();
             if (!code) return;
-            const success = addProductByBarcode(code);
-            if (success) input.value = '';
-            input.focus();
+            const exactMatch = findProductByBarcode(code);
+            if (exactMatch) {
+                addProductByBarcode(code);
+                input.value = '';
+                $('barcode-suggestions').classList.add('hidden');
+                input.focus();
+            } else {
+                showBarcodeSuggestions(code);
+            }
         }
+        if (e.key === 'Escape') $('barcode-suggestions').classList.add('hidden');
     });
-}
-
-async function openCameraScanner() {
-    const modal = $('camera-modal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-
-    const status = $('camera-status');
-    status.textContent = 'جارٍ تشغيل الكاميرا...';
-    status.className = 'text-sm text-center mt-3 text-blue-600';
-
-    try {
-        html5QrCode = new Html5Qrcode("camera-reader");
-        const config = {
-            fps: 10,
-            qrbox: { width: 280, height: 180 },
-            formatsToSupport: [
-                Html5QrcodeSupportedFormats.EAN_13,
-                Html5QrcodeSupportedFormats.EAN_8,
-                Html5QrcodeSupportedFormats.UPC_A,
-                Html5QrcodeSupportedFormats.UPC_E,
-                Html5QrcodeSupportedFormats.CODE_128,
-                Html5QrcodeSupportedFormats.CODE_39,
-                Html5QrcodeSupportedFormats.QR_CODE
-            ]
-        };
-
-        await html5QrCode.start(
-            { facingMode: "environment" },
-            config,
-            (decodedText) => {
-                status.textContent = `✅ تم اكتشاف: ${decodedText}`;
-                status.className = 'text-sm text-center mt-3 text-green-600 font-bold';
-                playBeep();
-                addProductByBarcode(decodedText);
-                closeCameraScanner();
-            },
-            (errorMessage) => { /* تجاهل */ }
-        );
-
-        status.textContent = '📷 وجّه الكاميرا نحو الباركود...';
-        status.className = 'text-sm text-center mt-3 text-green-600';
-    } catch (err) {
-        console.error('camera error:', err);
-        status.textContent = '❌ فشل تشغيل الكاميرا: ' + (err.message || 'تأكد من الأذونات');
-        status.className = 'text-sm text-center mt-3 text-red-600';
-    }
-}
-
-async function closeCameraScanner() {
-    try {
-        if (html5QrCode) {
-            await html5QrCode.stop();
-            html5QrCode.clear();
-            html5QrCode = null;
-        }
-    } catch (e) { /* ignore */ }
-    const modal = $('camera-modal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-    const reader = $('camera-reader');
-    if (reader) reader.innerHTML = '';
+    setupSuggestionHide();
 }
 
 function setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
-        const invoiceModalOpen = !$('invoice-modal').classList.contains('hidden');
-        const cameraModalOpen = !$('camera-modal').classList.contains('hidden');
-
+        const invoiceOpen = !$('invoice-modal').classList.contains('hidden');
+        const cameraOpen = !$('camera-modal').classList.contains('hidden');
         if (e.key === 'Escape') {
-            if (cameraModalOpen) { closeCameraScanner(); return; }
-            const openModals = ['invoice-modal','product-modal','party-modal','expense-modal',
-                                 'payment-modal','statement-modal','invoice-view-modal','confirm-modal'];
+            if (cameraOpen) { closeCameraScanner(); return; }
+            const openModals = ['invoice-modal','product-modal','party-modal','expense-modal','payment-modal','statement-modal','invoice-view-modal','confirm-modal','quick-add-product-modal'];
             for (const id of openModals) {
                 const m = $(id);
-                if (m && !m.classList.contains('hidden')) {
-                    m.classList.add('hidden');
-                    m.classList.remove('flex');
-                    return;
-                }
-            }
-            return;
-        }
-
-        if ((e.key === 'F2' || (e.ctrlKey && e.key.toLowerCase() === 'b'))) {
-            if (invoiceModalOpen) {
-                e.preventDefault();
-                const input = $('inv-barcode-input');
-                if (input) { input.focus(); input.select(); }
+                if (m && !m.classList.contains('hidden')) { m.classList.add('hidden'); m.classList.remove('flex'); return; }
             }
         }
-
-        if (e.key === 'F4' && invoiceModalOpen) {
+        if ((e.key === 'F2' || (e.ctrlKey && e.key.toLowerCase() === 'b')) && invoiceOpen) {
+            e.preventDefault();
+            const input = $('inv-barcode-input');
+            if (input) { input.focus(); input.select(); }
+        }
+        if (e.key === 'F4' && invoiceOpen) {
             e.preventDefault();
             const paid = $('inv-paid');
             if (paid) { paid.focus(); paid.select(); }
         }
-
-        if (e.key === 'F9' && invoiceModalOpen) {
+        if (e.key === 'F9' && invoiceOpen) {
             e.preventDefault();
             const form = $('invoice-form');
             if (form) form.requestSubmit();
         }
-
-        if (e.key === 'F3') {
-            const appVisible = !$('app-screen').classList.contains('hidden');
-            if (appVisible) {
-                e.preventDefault();
-                openInvoiceModal('sale');
-            }
+        if (e.key === 'F3' && !$('app-screen').classList.contains('hidden')) {
+            e.preventDefault();
+            openInvoiceModal('sale');
         }
     });
-
     setupBarcodeInput();
 }
 
@@ -2832,22 +2794,23 @@ if (document.readyState === 'loading') {
 Object.assign(window, {
     switchAuthMode, logout, switchTab,
     openModal, closeModal, confirmDialog,
-    openProductModal, deleteProduct, renderProducts,
+    openProductModal, deleteProduct, renderProducts, generateMissingBarcodes,
     openPartyModal, deleteParty, renderParties,
     openInvoiceModal, addInvoiceItem, removeInvoiceItem,
     onInvoiceItemProductChange, recalcInvoice, renderInvoices,
     viewInvoice, printInvoice, updateInvoicePartySelect,
     updateOriginalInvoicesSelect, loadReturnItems, addReturnItemRow, validateReturnQty,
     openExpenseModal, deleteExpense, renderExpenses,
-    openPaymentModal, openStatement, openPaymentModalFromStatement,
-    printStatement,
+    openPaymentModal, openStatement, openPaymentModalFromStatement, printStatement,
     generateReport, renderReportsLive, renderDashboard,
     exportBackup, importBackup, deleteAllData, renderBackupStats,
     showToast, escapeHtml, formatMoney, formatDate, dateKey,
-    openCameraScanner, closeCameraScanner, addProductByBarcode, findProductByBarcode
+    openCameraScanner, closeCameraScanner, scanBarcodeForProduct,
+    addProductByBarcode, addProductRowToInvoice, findProductByBarcode, submitBarcodeInput,
+    showBarcodeSuggestions, selectSuggestion, quickAddFromSearch, openQuickAddProductModal
 });
 
-console.log('✅ النظام جاهز — نسخة سوبر ماركت (باركود + كاميرا + اختصارات + بيانات Firebase جديدة)');
+console.log('✅ النظام جاهز — نسخة سوبر ماركت مع اقتراحات ذكية + باركود + كاميرا + اختصارات');
 </script>
 </body>
-    </html>
+</html>
