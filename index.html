@@ -2411,38 +2411,47 @@ function openStatement(partyType, partyId) {
         }
         
         if (debit || credit) {
-            movements.push({
-                date: inv.date || formatDate(inv.createdAt),
-                description: desc, debit, credit,
-                sortKey: new Date(inv.date || inv.createdAt?.toDate?.() || Date.now()).getTime(),
-                createdAt: inv.createdAt?.toDate?.()?.getTime() || 0
-            });
+    // ✅ الترتيب بالتوقيت الفعلي (createdAt) وليس التاريخ فقط
+    const createdAtMs = inv.createdAt?.toDate?.()?.getTime() || 
+                        new Date(inv.date || Date.now()).getTime();
+    movements.push({
+        date: inv.date || formatDate(inv.createdAt),
+        description: desc, debit, credit,
+        sortKey: createdAtMs,
+        createdAt: createdAtMs
+    });
         }
         
         if (paid > 0) {
-            movements.push({
-                date: inv.date || formatDate(inv.createdAt),
-                description: `💵 دفعة مع الفاتورة #${inv.number}`,
-                debit: (partyType === 'supplier' && inv.type === 'purchase') || (partyType === 'customer' && inv.type === 'sale_return') ? paid : 0,
-                credit: (partyType === 'customer' && inv.type === 'sale') || (partyType === 'supplier' && inv.type === 'purchase_return') ? paid : 0,
-                sortKey: new Date(inv.date || inv.createdAt?.toDate?.() || Date.now()).getTime() + 1,
-                createdAt: (inv.createdAt?.toDate?.()?.getTime() || 0) + 1
-            });
+    // ✅ الترتيب بالتوقيت الفعلي + 1ms لضمان أنها بعد الفاتورة مباشرة
+    const createdAtMs = inv.createdAt?.toDate?.()?.getTime() || 
+                        new Date(inv.date || Date.now()).getTime();
+    movements.push({
+        date: inv.date || formatDate(inv.createdAt),
+        description: `💵 دفعة مع الفاتورة #${inv.number}`,
+        debit: (partyType === 'supplier' && inv.type === 'purchase') || (partyType === 'customer' && inv.type === 'sale_return') ? paid : 0,
+        credit: (partyType === 'customer' && inv.type === 'sale') || (partyType === 'supplier' && inv.type === 'purchase_return') ? paid : 0,
+        sortKey: createdAtMs + 1,
+        createdAt: createdAtMs + 1
+    });
         }
     });
 
     // الدفعات المستقلة
     payments.forEach(pay => {
-        if (pay.partyId !== partyId) return;
-        movements.push({
-            date: pay.date || formatDate(pay.createdAt),
-            description: `دفعة (${pay.method === 'cash' ? 'نقدي' : pay.method === 'bank' ? 'بنكي' : 'أخرى'})${pay.notes ? ' - ' + pay.notes : ''}`,
-            debit: pay.direction === 'out' ? pay.amount : 0,
-            credit: pay.direction === 'in' ? pay.amount : 0,
-            sortKey: new Date(pay.date || pay.createdAt?.toDate?.() || Date.now()).getTime(),
-            createdAt: pay.createdAt?.toDate?.()?.getTime() || 0
-        });
+    if (pay.partyId !== partyId) return;
+    // ✅ الترتيب بالتوقيت الفعلي (createdAt) للدفعة المستقلة
+    const createdAtMs = pay.createdAt?.toDate?.()?.getTime() || 
+                        new Date(pay.date || Date.now()).getTime();
+    movements.push({
+        date: pay.date || formatDate(pay.createdAt),
+        description: `دفعة (${pay.method === 'cash' ? 'نقدي' : pay.method === 'bank' ? 'بنكي' : 'أخرى'})${pay.notes ? ' - ' + pay.notes : ''}`,
+        debit: pay.direction === 'out' ? pay.amount : 0,
+        credit: pay.direction === 'in' ? pay.amount : 0,
+        sortKey: createdAtMs,
+        createdAt: createdAtMs
     });
+});
 
     movements.sort((a, b) => a.sortKey - b.sortKey || a.createdAt - b.createdAt);
     let running = 0;
