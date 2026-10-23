@@ -33,14 +33,7 @@
         100% { background-color: transparent; }
     }
     #camera-reader video { border-radius: 8px; }
-    
-    /* 🔍 قائمة اقتراحات الباركود */
-    .suggestion-item {
-        padding: 12px 16px;
-        border-bottom: 1px solid #e5e7eb;
-        cursor: pointer;
-        transition: background 0.15s;
-    }
+    .suggestion-item { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; cursor: pointer; transition: background 0.15s; }
     .suggestion-item:last-child { border-bottom: none; }
     .suggestion-item:hover, .suggestion-item.active { background: #eff6ff; }
     .suggestion-item .name { font-weight: 600; color: #1f2937; }
@@ -1023,7 +1016,44 @@ function playBeep() {
     } catch (e) {}
 }
 
-// ============ Auth ============
+// ============================================================
+// 💰 الدالة الموحدة لحساب الرصيد الفعلي (الإصلاح الأساسي)
+// ============================================================
+function getPartyActualBalance(party, type) {
+    if (!party) return 0;
+    
+    let balance = parseFloat(party.openingBalance) || 0;
+    
+    // ✅ الفواتير
+    invoices.forEach(inv => {
+        if (inv.partyId !== party.id) return;
+        
+        const total = parseFloat(inv.total) || 0;
+        const paid = parseFloat(inv.paid) || 0;
+        const remaining = total - paid;
+        
+        if (type === 'customer') {
+            if (inv.type === 'sale') balance += remaining;
+            else if (inv.type === 'sale_return') balance -= remaining;
+        } else {
+            if (inv.type === 'purchase') balance += remaining;
+            else if (inv.type === 'purchase_return') balance -= remaining;
+        }
+    });
+    
+    // ✅ الدفعات المستقلة
+    payments.forEach(pay => {
+        if (pay.partyId !== party.id) return;
+        
+        const amount = parseFloat(pay.amount) || 0;
+        
+        if (type === 'customer' && pay.direction === 'in') balance -= amount;
+        else if (type === 'supplier' && pay.direction === 'out') balance -= amount;
+    });
+    
+    return balance;
+}
+    // ============ Auth ============
 let authMode = 'login';
 function switchAuthMode(mode) {
     authMode = mode;
@@ -1173,7 +1203,8 @@ function startListeners() {
             invoices = snap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
                 .sort((a, b) => (b.createdAt?.toDate?.()?.getTime() || 0) - (a.createdAt?.toDate?.()?.getTime() || 0));
-            renderInvoices(); renderDashboard(); renderReportsLive();
+            renderInvoices(); renderParties('customer'); renderParties('supplier');
+            renderDashboard(); renderReportsLive();
         },
         err => console.error('invoices listener:', err)
     );
@@ -1195,6 +1226,7 @@ function startListeners() {
             payments = snap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
                 .sort((a, b) => (b.createdAt?.toDate?.()?.getTime() || 0) - (a.createdAt?.toDate?.()?.getTime() || 0));
+            renderParties('customer'); renderParties('supplier');
             renderDashboard(); renderReportsLive();
         },
         err => console.error('payments listener:', err)
@@ -1225,7 +1257,8 @@ function switchTab(tab) {
     if (tab === 'reports') setTimeout(generateReport, 100);
     if (tab === 'backup') setTimeout(renderBackupStats, 100);
 }
-    // ============ Products ============
+
+// ============ Products ============
 function openProductModal(id) {
     $('product-form').reset();
     $('prod-id').value = '';
@@ -1343,7 +1376,7 @@ function renderProducts() {
     }).join('');
 }
 
-// ============ Parties ============
+// ============ Parties (Customers/Suppliers) - نسخة مُصلحة ============
 function openPartyModal(type, id) {
     $('party-form').reset();
     $('party-id').value = '';
@@ -1358,7 +1391,7 @@ function openPartyModal(type, id) {
             $('party-name').value = p.name || '';
             $('party-phone').value = p.phone || '';
             $('party-address').value = p.address || '';
-            $('party-balance').value = p.balance || 0;
+            $('party-balance').value = p.openingBalance || 0;
             $('party-notes').value = p.notes || '';
         }
     }
@@ -1370,21 +1403,44 @@ $('party-form').addEventListener('submit', async (e) => {
     const id = $('party-id').value;
     const type = $('party-type').value;
     const coll = type === 'customer' ? 'customers' : 'suppliers';
-    const balance = parseFloat($('party-balance').value) || 0;
+    const openingBalance = parseFloat($('party-balance').value) || 0;
     const data = {
         name: $('party-name').value.trim(),
         phone: $('party-phone').value.trim(),
         address: $('party-address').value.trim(),
-        balance: balance,
-        openingBalance: balance,
+        openingBalance: openingBalance,
+        balance: openingBalance,
         notes: $('party-notes').value.trim(),
         ownerId: currentUser.uid,
         updatedAt: serverTimestamp()
     };
     if (!data.name) { showToast('الاسم مطلوب', 'error'); return; }
     try {
-        if (id) { await updateDoc(doc(db, coll, id), data); showToast('تم التعديل ✅'); }
-        else { data.createdAt = serverTimestamp(); await addDoc(collection(db, coll), data); showToast('تمت الإضافة ✅'); }
+        if (id) { 
+            // عند التعديل: لا نغيّر openingBalance إذا كانت هناك حركات
+            const arr = type === 'customer' ? customers : suppliers;
+            const old = arr.find(x => x.id === id);
+            const hasMovements = invoices.some(inv => inv.partyId === id) || payments.some(p => p.partyId === id);
+            
+            if (hasMovements) {
+                // فقط حدّث البيانات الأساسية
+                await updateDoc(doc(db, coll, id), {
+                    name: data.name,
+                    phone: data.phone,
+                    address: data.address,
+                    notes: data.notes,
+                    updatedAt: serverTimestamp()
+                });
+                showToast('تم التعديل ✅ (الرصيد الافتتاحي محفوظ)', 'success');
+            } else {
+                await updateDoc(doc(db, coll, id), data);
+                showToast('تم التعديل ✅');
+            }
+        } else { 
+            data.createdAt = serverTimestamp(); 
+            await addDoc(collection(db, coll), data); 
+            showToast('تمت الإضافة ✅'); 
+        }
         closeModal('party-modal');
     } catch (err) { showToast('فشل الحفظ: ' + err.message, 'error'); }
 });
@@ -1393,13 +1449,23 @@ async function deleteParty(type, id) {
     const arr = type === 'customer' ? customers : suppliers;
     const p = arr.find(x => x.id === id);
     if (!p) return;
-    if (!await confirmDialog(`حذف "${p.name}"؟`, 'تأكيد الحذف')) return;
+    
+    const hasMovements = invoices.some(inv => inv.partyId === id) || payments.some(pay => pay.partyId === id);
+    if (hasMovements) {
+        if (!await confirmDialog(`⚠️ "${p.name}" لديه فواتير أو دفعات!\nحذفه سيؤدي لكسر الروابط.\n\nهل أنت متأكد؟`, 'تحذير')) return;
+    } else {
+        if (!await confirmDialog(`حذف "${p.name}"؟`, 'تأكيد الحذف')) return;
+    }
+    
     try { await deleteDoc(doc(db, type === 'customer' ? 'customers' : 'suppliers', id)); showToast('تم الحذف', 'info'); }
     catch (err) { showToast('فشل الحذف: ' + err.message, 'error'); }
 }
 
+// ============ renderParties - نسخة مُصلحة بالكامل ============
 function renderParties(type) {
     const tbody = $(type === 'customer' ? 'customers-table-body' : 'suppliers-table-body');
+    if (!tbody) return;
+    
     const search = ($(type === 'customer' ? 'customer-search' : 'supplier-search')?.value || '').toLowerCase();
     const arr = type === 'customer' ? customers : suppliers;
     const list = search ? arr.filter(p => (p.name || '').toLowerCase().includes(search)) : arr;
@@ -1410,30 +1476,13 @@ function renderParties(type) {
     }
 
     tbody.innerHTML = list.map(p => {
-        let actualBalance = p.openingBalance || 0;
-        invoices.forEach(inv => {
-            if (inv.partyId !== p.id) return;
-            if (type === 'customer') {
-                if (inv.type === 'sale') actualBalance += (inv.total - (inv.paid || 0));
-                else if (inv.type === 'sale_return') actualBalance -= (inv.total - (inv.paid || 0));
-            } else {
-                if (inv.type === 'purchase') actualBalance += (inv.total - (inv.paid || 0));
-                else if (inv.type === 'purchase_return') actualBalance -= (inv.total - (inv.paid || 0));
-            }
-        });
-        payments.forEach(pay => {
-            if (pay.partyId !== p.id) return;
-            if (type === 'customer') {
-                if (pay.direction === 'in') actualBalance -= pay.amount;
-            } else {
-                if (pay.direction === 'out') actualBalance -= pay.amount;
-            }
-        });
-
-        const bal = actualBalance;
+        // ✅ استخدام الدالة الموحدة
+        const bal = getPartyActualBalance(p, type);
+        
         const balClass = type === 'customer'
             ? (bal > 0 ? 'text-red-600' : bal < 0 ? 'text-green-600' : 'text-gray-500')
             : (bal > 0 ? 'text-orange-600' : bal < 0 ? 'text-green-600' : 'text-gray-500');
+        
         const balLabel = type === 'customer'
             ? (bal > 0 ? 'مدين' : bal < 0 ? 'دائن' : 'متوازن')
             : (bal > 0 ? 'أنت مدين' : bal < 0 ? 'دائن' : 'متوازن');
@@ -1457,9 +1506,410 @@ function renderParties(type) {
             </td>
         </tr>`;
     }).join('');
+                             }
+    // ============ Invoices ============
+function openInvoiceModal(type) {
+    $('invoice-items-body').innerHTML = '';
+    $('invoice-form').reset();
+    $('inv-type').value = type;
+    const isSale = type === 'sale';
+    const isSaleReturn = type === 'sale_return';
+    const isPurchaseReturn = type === 'purchase_return';
+    const isReturn = isSaleReturn || isPurchaseReturn;
+
+    const titles = {
+        sale: '🧾 فاتورة بيع', purchase: '🚚 فاتورة شراء',
+        sale_return: '↩️ مرتجع بيع (من عميل)', purchase_return: '↩️ مرتجع شراء (لمورد)'
+    };
+    $('invoice-modal-title').textContent = titles[type] || 'فاتورة';
+    $('inv-party-label').textContent = (isSale || isSaleReturn) ? 'العميل *' : 'المورد *';
+    $('inv-number-display').value = generateInvoiceNumber(type);
+    $('inv-date').value = new Date().toISOString().slice(0, 10);
+    $('inv-discount').value = 0;
+    $('inv-paid').value = 0;
+    $('inv-subtotal').textContent = '0.00';
+    $('inv-discount-display').textContent = '0.00';
+    $('inv-total').textContent = '0.00';
+    $('inv-paid-display').textContent = '0.00';
+    $('inv-remaining').textContent = '0.00';
+
+    const returnSection = $('inv-return-section');
+    if (isReturn) { returnSection.classList.remove('hidden'); updateOriginalInvoicesSelect(); }
+    else { returnSection.classList.add('hidden'); }
+
+    updateInvoicePartySelect();
+    addInvoiceItem();
+    const barcodeInput = $('inv-barcode-input');
+    if (barcodeInput) barcodeInput.value = '';
+    const sug = $('barcode-suggestions');
+    if (sug) { sug.classList.add('hidden'); sug.innerHTML = ''; }
+
+    openModal('invoice-modal');
+    setTimeout(() => { if (barcodeInput) barcodeInput.focus(); }, 300);
 }
 
-// ============ Barcode & Suggestions (NEW) ============
+function generateInvoiceNumber(type) {
+    const prefixes = { sale: 'S', purchase: 'P', sale_return: 'RS', purchase_return: 'RP' };
+    const prefix = prefixes[type] || 'INV';
+    const sameType = invoices.filter(i => i.type === type);
+    const num = String(sameType.length + 1).padStart(5, '0');
+    return `${settings.invoicePrefix || 'INV'}-${prefix}${num}`;
+}
+
+function updateInvoicePartySelect() {
+    const type = $('inv-type')?.value;
+    if (!type) return;
+    const select = $('inv-party');
+    const isSaleLike = type === 'sale' || type === 'sale_return';
+    const arr = isSaleLike ? customers : suppliers;
+    const current = select.value;
+    select.innerHTML = '<option value="">اختر...</option>' + arr.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+    if (arr.some(p => p.id === current)) select.value = current;
+}
+
+function addInvoiceItem() {
+    const rowId = 'inv-item-' + Date.now() + Math.random().toString(36).slice(2, 6);
+    const type = $('inv-type').value;
+    const isSale = type === 'sale';
+    const priceField = (type === 'sale' || type === 'sale_return') ? 'sellPrice' : 'costPrice';
+    const tbody = $('invoice-items-body');
+    const tr = document.createElement('tr');
+    tr.id = rowId;
+    tr.className = 'border-b';
+    tr.innerHTML = `
+        <td class="p-2">
+            <select class="inv-item-product w-full border rounded p-1 text-sm" onchange="onInvoiceItemProductChange('${rowId}')">
+                <option value="">اختر الصنف</option>
+                ${products.map(p => {
+                    const availableQty = isSale ? p.qty : '∞';
+                    return `<option value="${p.id}" data-price="${p[priceField] || 0}" data-cost="${p.costPrice || 0}" data-stock="${p.qty}">${escapeHtml(p.name)} (متاح: ${availableQty})</option>`;
+                }).join('')}
+            </select>
+        </td>
+        <td class="p-2"><input type="number" class="inv-item-qty w-full border rounded p-1 text-sm" value="1" min="1" oninput="recalcInvoice()"></td>
+        <td class="p-2"><input type="number" class="inv-item-price w-full border rounded p-1 text-sm" value="0" min="0" step="0.01" oninput="recalcInvoice()"></td>
+        <td class="p-2 inv-item-total font-semibold">0.00</td>
+        <td class="p-2"><button type="button" onclick="removeInvoiceItem('${rowId}')" class="text-red-500 hover:text-red-700 text-lg">&times;</button></td>
+    `;
+    tbody.appendChild(tr);
+}
+
+function onInvoiceItemProductChange(rowId) {
+    const tr = $(rowId);
+    if (!tr) return;
+    const select = tr.querySelector('.inv-item-product');
+    const opt = select.options[select.selectedIndex];
+    const price = parseFloat(opt.dataset.price) || 0;
+    const cost = parseFloat(opt.dataset.cost) || 0;
+    tr.querySelector('.inv-item-price').value = price.toFixed(2);
+    tr.dataset.cost = cost;
+    recalcInvoice();
+}
+
+function removeInvoiceItem(rowId) {
+    const tr = $(rowId);
+    if (tr) tr.remove();
+    recalcInvoice();
+}
+
+function recalcInvoice() {
+    let subtotal = 0;
+    document.querySelectorAll('#invoice-items-body tr').forEach(tr => {
+        const qty = parseFloat(tr.querySelector('.inv-item-qty')?.value) || 0;
+        const price = parseFloat(tr.querySelector('.inv-item-price')?.value) || 0;
+        const total = qty * price;
+        const totalEl = tr.querySelector('.inv-item-total');
+        if (totalEl) totalEl.textContent = formatMoney(total);
+        subtotal += total;
+    });
+    const discount = parseFloat($('inv-discount').value) || 0;
+    const total = Math.max(0, subtotal - discount);
+    const paid = parseFloat($('inv-paid').value) || 0;
+    const remaining = Math.max(0, total - paid);
+    $('inv-subtotal').textContent = formatMoney(subtotal);
+    $('inv-discount-display').textContent = formatMoney(discount);
+    $('inv-total').textContent = formatMoney(total);
+    $('inv-paid-display').textContent = formatMoney(paid);
+    $('inv-remaining').textContent = formatMoney(remaining);
+}
+
+// ============ Return Invoices ============
+function updateOriginalInvoicesSelect() {
+    const type = $('inv-type').value;
+    const isSaleReturn = type === 'sale_return';
+    const originalType = isSaleReturn ? 'sale' : 'purchase';
+    const select = $('inv-original');
+    if (!select) return;
+    const originalInvoices = invoices.filter(i => i.type === originalType);
+    select.innerHTML = '<option value="">اختر الفاتورة الأصلية...</option>' +
+        originalInvoices.map(inv =>
+            `<option value="${inv.id}">${escapeHtml(inv.number)} — ${escapeHtml(inv.partyName)} — ${formatMoney(inv.total)} ${settings.currency}</option>`
+        ).join('');
+}
+
+function loadReturnItems() {
+    const originalId = $('inv-original').value;
+    if (!originalId) { showToast('اختر الفاتورة الأصلية أولاً', 'warn'); return; }
+    const original = invoices.find(i => i.id === originalId);
+    if (!original) { showToast('الفاتورة الأصلية غير موجودة', 'error'); return; }
+    $('inv-party').value = original.partyId;
+    $('invoice-items-body').innerHTML = '';
+    const previousReturns = {};
+    const returnType = $('inv-type').value;
+    invoices.forEach(inv => {
+        if (inv.type === returnType && inv.originalInvoiceId === originalId) {
+            (inv.items || []).forEach(it => {
+                previousReturns[it.productId] = (previousReturns[it.productId] || 0) + it.qty;
+            });
+        }
+    });
+    (original.items || []).forEach(item => {
+        const alreadyReturned = previousReturns[item.productId] || 0;
+        const availableToReturn = item.qty - alreadyReturned;
+        addReturnItemRow(item, availableToReturn);
+    });
+    if (original.items.length === 0) showToast('الفاتورة الأصلية لا تحتوي على أصناف', 'error');
+}
+
+function addReturnItemRow(item, maxQty) {
+    const rowId = 'inv-item-' + Date.now() + Math.random().toString(36).slice(2, 6);
+    const tbody = $('invoice-items-body');
+    const tr = document.createElement('tr');
+    tr.id = rowId;
+    tr.className = 'border-b';
+    tr.dataset.productId = item.productId;
+    tr.dataset.maxQty = maxQty;
+    tr.dataset.cost = item.costPrice || 0;
+    tr.innerHTML = `
+        <td class="p-2">
+            <div class="text-sm font-semibold">${escapeHtml(item.name)}</div>
+            <div class="text-xs text-gray-500">الأصلية: ${item.qty} | المتاح: <span class="font-bold text-red-600">${maxQty}</span></div>
+        </td>
+        <td class="p-2"><input type="number" class="inv-item-qty w-full border rounded p-1 text-sm" value="0" min="0" max="${maxQty}" oninput="validateReturnQty(this); recalcInvoice();"></td>
+        <td class="p-2"><input type="number" class="inv-item-price w-full border rounded p-1 text-sm" value="${item.price}" min="0" step="0.01" oninput="recalcInvoice()"></td>
+        <td class="p-2 inv-item-total font-semibold">0.00</td>
+        <td class="p-2"><button type="button" onclick="removeInvoiceItem('${rowId}')" class="text-red-500 hover:text-red-700 text-lg">&times;</button></td>
+    `;
+    tbody.appendChild(tr);
+}
+
+function validateReturnQty(input) {
+    const tr = input.closest('tr');
+    const max = parseFloat(tr.dataset.maxQty) || 0;
+    const val = parseFloat(input.value) || 0;
+    if (val > max) { input.value = max; showToast(`الحد الأقصى للإرجاع: ${max}`, 'warn'); }
+    if (val < 0) input.value = 0;
+}
+
+// ============ Invoice Submit ============
+$('invoice-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const type = $('inv-type').value;
+    const isSale = type === 'sale';
+    const isPurchase = type === 'purchase';
+    const isSaleReturn = type === 'sale_return';
+    const isPurchaseReturn = type === 'purchase_return';
+    const isReturn = isSaleReturn || isPurchaseReturn;
+    const isSaleLike = isSale || isSaleReturn;
+    const partyId = $('inv-party').value;
+    if (!partyId) { showToast('اختر الجهة', 'error'); return; }
+    const partyArr = isSaleLike ? customers : suppliers;
+    const party = partyArr.find(p => p.id === partyId);
+    if (!party) { showToast('الجهة غير موجودة', 'error'); return; }
+
+    let originalInvoice = null;
+    if (isReturn) {
+        const originalId = $('inv-original').value;
+        if (!originalId) { showToast('اختر الفاتورة الأصلية', 'error'); return; }
+        originalInvoice = invoices.find(i => i.id === originalId);
+        if (!originalInvoice) { showToast('الفاتورة الأصلية غير موجودة', 'error'); return; }
+    }
+
+    const items = [];
+    document.querySelectorAll('#invoice-items-body tr').forEach(tr => {
+        const productId = tr.dataset.productId || tr.querySelector('.inv-item-product')?.value;
+        const qty = parseFloat(tr.querySelector('.inv-item-qty')?.value) || 0;
+        const price = parseFloat(tr.querySelector('.inv-item-price')?.value) || 0;
+        const cost = parseFloat(tr.dataset.cost) || 0;
+        if (productId && qty > 0) {
+            const product = products.find(p => p.id === productId);
+            items.push({ productId, name: product?.name || 'غير معروف', qty, price, costPrice: cost, total: qty * price });
+        }
+    });
+    if (items.length === 0) { showToast('أضف بنداً واحداً على الأقل', 'error'); return; }
+
+    if (isReturn && originalInvoice) {
+        const previousReturns = {};
+        invoices.forEach(inv => {
+            if (inv.type === type && inv.originalInvoiceId === originalInvoice.id) {
+                (inv.items || []).forEach(it => {
+                    previousReturns[it.productId] = (previousReturns[it.productId] || 0) + it.qty;
+                });
+            }
+        });
+        for (const item of items) {
+            const originalItem = originalInvoice.items.find(i => i.productId === item.productId);
+            if (!originalItem) { showToast(`الصنف "${item.name}" غير موجود في الأصلية`, 'error'); return; }
+            const alreadyReturned = previousReturns[item.productId] || 0;
+            const availableToReturn = originalItem.qty - alreadyReturned;
+            if (item.qty > availableToReturn) { showToast(`الكمية المُرتجعة تتجاوز المتاح (${availableToReturn})`, 'error'); return; }
+        }
+    }
+    if (isSale || isPurchaseReturn) {
+        for (const item of items) {
+            const p = products.find(x => x.id === item.productId);
+            if (!p) { showToast(`الصنف "${item.name}" غير موجود`, 'error'); return; }
+            if (p.qty < item.qty) { showToast(`الكمية غير كافية للصنف "${p.name}" (متاح: ${p.qty})`, 'error'); return; }
+        }
+    }
+
+    const subtotal = items.reduce((s, i) => s + i.total, 0);
+    const discount = parseFloat($('inv-discount').value) || 0;
+    const total = Math.max(0, subtotal - discount);
+    const paid = parseFloat($('inv-paid').value) || 0;
+    const remaining = Math.max(0, total - paid);
+
+    const invoice = {
+        type, number: $('inv-number-display').value,
+        partyId, partyName: party.name, items,
+        subtotal, discount, total, paid, remaining,
+        paymentMethod: $('inv-payment-method').value,
+        notes: $('inv-notes').value.trim(),
+        date: $('inv-date').value || new Date().toISOString().slice(0, 10),
+        originalInvoiceId: originalInvoice?.id || null,
+        originalInvoiceNumber: originalInvoice?.number || null,
+        ownerId: currentUser.uid, createdAt: serverTimestamp()
+    };
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true; submitBtn.textContent = 'جارٍ الحفظ...';
+    try {
+        const invRef = await addDoc(collection(db, 'invoices'), invoice);
+        
+        // ✅ تحديث المخزون
+        for (const item of items) {
+            const p = products.find(x => x.id === item.productId);
+            if (!p) continue;
+            let newQty = p.qty;
+            if (isSale) newQty -= item.qty;
+            else if (isPurchase) newQty += item.qty;
+            else if (isSaleReturn) newQty += item.qty;
+            else if (isPurchaseReturn) newQty -= item.qty;
+            if (newQty < 0) newQty = 0;
+            await updateDoc(doc(db, 'products', item.productId), { qty: newQty, updatedAt: serverTimestamp() });
+        }
+        
+        // ⚠️ ملاحظة: لم نُحدّث حقل balance في customer/supplier
+        // لأن getPartyActualBalance يحسب الرصيد من الفواتير مباشرة (أدق)
+        
+        const msgs = { sale: 'تم حفظ فاتورة البيع ✅', purchase: 'تم حفظ فاتورة الشراء ✅', sale_return: 'تم حفظ مرتجع البيع ✅', purchase_return: 'تم حفظ مرتجع الشراء ✅' };
+        showToast(msgs[type] || 'تم الحفظ ✅');
+        closeModal('invoice-modal');
+        setTimeout(() => viewInvoice(invRef.id), 400);
+    } catch (err) {
+        showToast('فشل الحفظ: ' + err.message, 'error');
+    } finally {
+        submitBtn.disabled = false; submitBtn.textContent = 'حفظ الفاتورة';
+    }
+});
+
+function renderInvoices() {
+    const tbody = $('invoices-table-body');
+    const search = ($('invoice-search')?.value || '').toLowerCase();
+    const typeFilter = $('invoice-type-filter')?.value || 'all';
+    const dateFilter = $('invoice-date-filter')?.value || '';
+    let list = invoices;
+    if (search) list = list.filter(i => (i.number || '').toLowerCase().includes(search) || (i.partyName || '').toLowerCase().includes(search));
+    if (typeFilter !== 'all') list = list.filter(i => i.type === typeFilter);
+    if (dateFilter) list = list.filter(i => i.date === dateFilter);
+    if (list.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-gray-400">لا توجد فواتير</td></tr>`; return; }
+    const typeLabels = { sale: 'بيع', purchase: 'شراء', sale_return: '↩️ مرتجع بيع', purchase_return: '↩️ مرتجع شراء' };
+    const typeColors = { sale: 'bg-blue-100 text-blue-700', purchase: 'bg-orange-100 text-orange-700', sale_return: 'bg-red-100 text-red-700', purchase_return: 'bg-purple-100 text-purple-700' };
+    tbody.innerHTML = list.map(inv => {
+        const isReturn = inv.type === 'sale_return' || inv.type === 'purchase_return';
+        return `
+        <tr class="border-b hover:bg-gray-50 ${isReturn ? 'bg-red-50/30' : ''}">
+            <td class="p-3 text-sm font-mono">${escapeHtml(inv.number || '-')}</td>
+            <td class="p-3"><span class="text-xs px-2 py-1 rounded ${typeColors[inv.type] || 'bg-gray-100'}">${typeLabels[inv.type] || inv.type}</span></td>
+            <td class="p-3 font-semibold">${escapeHtml(inv.partyName || '-')}${isReturn && inv.originalInvoiceNumber ? `<div class="text-xs text-gray-500">أصل: #${escapeHtml(inv.originalInvoiceNumber)}</div>` : ''}</td>
+            <td class="p-3 font-bold ${isReturn ? 'text-red-600' : ''}">${formatMoney(inv.total)}</td>
+            <td class="p-3 text-green-600">${formatMoney(inv.paid)}</td>
+            <td class="p-3 ${inv.remaining > 0 ? 'text-red-600 font-bold' : 'text-gray-400'}">${formatMoney(inv.remaining)}</td>
+            <td class="p-3 text-sm text-gray-500">${inv.date || formatDate(inv.createdAt)}</td>
+            <td class="p-3"><button onclick="viewInvoice('${inv.id}')" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded">عرض</button></td>
+        </tr>`;
+    }).join('');
+}
+
+function viewInvoice(id) {
+    const inv = invoices.find(i => i.id === id);
+    if (!inv) return;
+    const typeLabels = { sale: 'فاتورة بيع', purchase: 'فاتورة شراء', sale_return: 'مرتجع بيع', purchase_return: 'مرتجع شراء' };
+    const isReturn = inv.type === 'sale_return' || inv.type === 'purchase_return';
+    const partyLabel = (inv.type === 'sale' || inv.type === 'sale_return') ? 'العميل' : 'المورد';
+    const headerColor = isReturn ? 'text-red-700' : 'text-blue-700';
+    const html = `
+        <div class="space-y-4">
+            <div class="flex justify-between items-start border-b pb-3">
+                <div>
+                    <h2 class="text-xl font-bold">${escapeHtml(settings.storeName || 'متجري')}</h2>
+                    ${settings.phone ? `<p class="text-sm text-gray-600">📞 ${escapeHtml(settings.phone)}</p>` : ''}
+                    ${settings.address ? `<p class="text-sm text-gray-600">📍 ${escapeHtml(settings.address)}</p>` : ''}
+                </div>
+                <div class="text-left">
+                    <p class="text-lg font-bold ${headerColor}">${typeLabels[inv.type]}</p>
+                    <p class="text-sm font-mono">#${escapeHtml(inv.number)}</p>
+                    <p class="text-sm text-gray-600">${inv.date}</p>
+                </div>
+            </div>
+            ${isReturn && inv.originalInvoiceNumber ? `<div class="bg-red-50 p-3 rounded-lg border border-red-200"><p class="text-sm text-red-800"><strong>↩️ مرتبط بالأصلية:</strong> #${escapeHtml(inv.originalInvoiceNumber)}</p></div>` : ''}
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div><strong>${partyLabel}:</strong> ${escapeHtml(inv.partyName)}</div>
+                <div><strong>طريقة الدفع:</strong> ${{cash:'نقدي', credit:'آجل', partial:'جزئي'}[inv.paymentMethod] || '-'}</div>
+            </div>
+            <table class="w-full text-right border-collapse">
+                <thead><tr class="bg-gray-100">
+                    <th class="p-2 border text-sm">الصنف</th>
+                    <th class="p-2 border text-sm">الكمية</th>
+                    <th class="p-2 border text-sm">السعر</th>
+                    <th class="p-2 border text-sm">الإجمالي</th>
+                </tr></thead>
+                <tbody>
+                    ${(inv.items || []).map(it => `
+                        <tr>
+                            <td class="p-2 border text-sm">${escapeHtml(it.name)}</td>
+                            <td class="p-2 border text-sm">${it.qty}</td>
+                            <td class="p-2 border text-sm">${formatMoney(it.price)}</td>
+                            <td class="p-2 border text-sm">${formatMoney(it.total)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <div class="flex justify-end">
+                <div class="w-64 space-y-1 text-sm">
+                    <div class="flex justify-between"><span>الإجمالي الفرعي:</span><span>${formatMoney(inv.subtotal)}</span></div>
+                    <div class="flex justify-between"><span>الخصم:</span><span>${formatMoney(inv.discount)}</span></div>
+                    <div class="flex justify-between font-bold border-t pt-1 text-base"><span>الإجمالي:</span><span>${formatMoney(inv.total)} ${settings.currency}</span></div>
+                    <div class="flex justify-between text-green-600"><span>المدفوع:</span><span>${formatMoney(inv.paid)}</span></div>
+                    <div class="flex justify-between text-red-600 font-bold"><span>المتبقي:</span><span>${formatMoney(inv.remaining)}</span></div>
+                </div>
+            </div>
+            ${inv.notes ? `<div class="bg-gray-50 p-3 rounded text-sm"><strong>ملاحظات:</strong> ${escapeHtml(inv.notes)}</div>` : ''}
+            <div class="text-center text-xs text-gray-400 pt-3 border-t">شكراً لتعاملكم معنا</div>
+        </div>`;
+    $('invoice-print-area').innerHTML = html;
+    openModal('invoice-view-modal');
+}
+
+function printInvoice() {
+    const content = $('invoice-print-area').innerHTML;
+    const win = window.open('', '', 'width=800,height=600');
+    win.document.write(`<html dir="rtl"><head><title>طباعة</title><style>body{font-family:'Cairo',Tahoma,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px;text-align:right;font-size:12px}th{background:#f3f4f6}h2{margin:0}</style></head><body>${content}</body></html>`);
+    win.document.close();
+    setTimeout(() => win.print(), 400);
+}
+
+// ============ Barcode & Suggestions ============
 let html5QrCode = null;
 
 function findProductByBarcode(code) {
@@ -1577,14 +2027,10 @@ function addProductByBarcode(code) {
     const cleanCode = String(code).trim();
     if (!cleanCode) return false;
 
-    // البحث المباشر
     const product = findProductByBarcode(cleanCode);
     if (!product) {
-        // محاولة إيجاد بالاسم (إذا كتب المستخدم اسم)
         const byName = products.find(p => (p.name || '').toLowerCase() === cleanCode.toLowerCase());
-        if (byName) {
-            return addProductToInvoiceInternal(byName);
-        }
+        if (byName) return addProductToInvoiceInternal(byName);
         openQuickAddProductModal(cleanCode);
         return false;
     }
@@ -1803,411 +2249,6 @@ $('quick-add-product-form').addEventListener('submit', async (e) => {
     }
 });
 
-// ============ Invoices ============
-function openInvoiceModal(type) {
-    $('invoice-items-body').innerHTML = '';
-    $('invoice-form').reset();
-    $('inv-type').value = type;
-    const isSale = type === 'sale';
-    const isSaleReturn = type === 'sale_return';
-    const isPurchaseReturn = type === 'purchase_return';
-    const isReturn = isSaleReturn || isPurchaseReturn;
-
-    const titles = {
-        sale: '🧾 فاتورة بيع', purchase: '🚚 فاتورة شراء',
-        sale_return: '↩️ مرتجع بيع (من عميل)', purchase_return: '↩️ مرتجعالشراء (لمورد)'
-    };
-    $('invoice-modal-title').textContent = titles[type] || 'فاتورة';
-    $('inv-party-label').textContent = (isSale || isSaleReturn) ? 'العميل *' : 'المورد *';
-    $('inv-number-display').value = generateInvoiceNumber(type);
-    $('inv-date').value = new Date().toISOString().slice(0, 10);
-    $('inv-discount').value = 0;
-    $('inv-paid').value = 0;
-    $('inv-subtotal').textContent = '0.00';
-    $('inv-discount-display').textContent = '0.00';
-    $('inv-total').textContent = '0.00';
-    $('inv-paid-display').textContent = '0.00';
-    $('inv-remaining').textContent = '0.00';
-
-    const returnSection = $('inv-return-section');
-    if (isReturn) { returnSection.classList.remove('hidden'); updateOriginalInvoicesSelect(); }
-    else { returnSection.classList.add('hidden'); }
-
-    updateInvoicePartySelect();
-    addInvoiceItem();
-    const barcodeInput = $('inv-barcode-input');
-    if (barcodeInput) barcodeInput.value = '';
-    const sug = $('barcode-suggestions');
-    if (sug) { sug.classList.add('hidden'); sug.innerHTML = ''; }
-
-    openModal('invoice-modal');
-    setTimeout(() => { if (barcodeInput) barcodeInput.focus(); }, 300);
-}
-
-function generateInvoiceNumber(type) {
-    const prefixes = { sale: 'S', purchase: 'P', sale_return: 'RS', purchase_return: 'RP' };
-    const prefix = prefixes[type] || 'INV';
-    const sameType = invoices.filter(i => i.type === type);
-    const num = String(sameType.length + 1).padStart(5, '0');
-    return `${settings.invoicePrefix || 'INV'}-${prefix}${num}`;
-}
-
-function updateInvoicePartySelect() {
-    const type = $('inv-type')?.value;
-    if (!type) return;
-    const select = $('inv-party');
-    const isSaleLike = type === 'sale' || type === 'sale_return';
-    const arr = isSaleLike ? customers : suppliers;
-    const current = select.value;
-    select.innerHTML = '<option value="">اختر...</option>' + arr.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
-    if (arr.some(p => p.id === current)) select.value = current;
-}
-
-function addInvoiceItem() {
-    const rowId = 'inv-item-' + Date.now() + Math.random().toString(36).slice(2, 6);
-    const type = $('inv-type').value;
-    const isSale = type === 'sale';
-    const priceField = (type === 'sale' || type === 'sale_return') ? 'sellPrice' : 'costPrice';
-    const tbody = $('invoice-items-body');
-    const tr = document.createElement('tr');
-    tr.id = rowId;
-    tr.className = 'border-b';
-    tr.innerHTML = `
-        <td class="p-2">
-            <select class="inv-item-product w-full border rounded p-1 text-sm" onchange="onInvoiceItemProductChange('${rowId}')">
-                <option value="">اختر الصنف</option>
-                ${products.map(p => {
-                    const availableQty = isSale ? p.qty : '∞';
-                    return `<option value="${p.id}" data-price="${p[priceField] || 0}" data-cost="${p.costPrice || 0}" data-stock="${p.qty}">${escapeHtml(p.name)} (متاح: ${availableQty})</option>`;
-                }).join('')}
-            </select>
-        </td>
-        <td class="p-2"><input type="number" class="inv-item-qty w-full border rounded p-1 text-sm" value="1" min="1" oninput="recalcInvoice()"></td>
-        <td class="p-2"><input type="number" class="inv-item-price w-full border rounded p-1 text-sm" value="0" min="0" step="0.01" oninput="recalcInvoice()"></td>
-        <td class="p-2 inv-item-total font-semibold">0.00</td>
-        <td class="p-2"><button type="button" onclick="removeInvoiceItem('${rowId}')" class="text-red-500 hover:text-red-700 text-lg">&times;</button></td>
-    `;
-    tbody.appendChild(tr);
-}
-
-function onInvoiceItemProductChange(rowId) {
-    const tr = $(rowId);
-    if (!tr) return;
-    const select = tr.querySelector('.inv-item-product');
-    const opt = select.options[select.selectedIndex];
-    const price = parseFloat(opt.dataset.price) || 0;
-    const cost = parseFloat(opt.dataset.cost) || 0;
-    tr.querySelector('.inv-item-price').value = price.toFixed(2);
-    tr.dataset.cost = cost;
-    recalcInvoice();
-}
-
-function removeInvoiceItem(rowId) {
-    const tr = $(rowId);
-    if (tr) tr.remove();
-    recalcInvoice();
-}
-
-function recalcInvoice() {
-    let subtotal = 0;
-    document.querySelectorAll('#invoice-items-body tr').forEach(tr => {
-        const qty = parseFloat(tr.querySelector('.inv-item-qty')?.value) || 0;
-        const price = parseFloat(tr.querySelector('.inv-item-price')?.value) || 0;
-        const total = qty * price;
-        const totalEl = tr.querySelector('.inv-item-total');
-        if (totalEl) totalEl.textContent = formatMoney(total);
-        subtotal += total;
-    });
-    const discount = parseFloat($('inv-discount').value) || 0;
-    const total = Math.max(0, subtotal - discount);
-    const paid = parseFloat($('inv-paid').value) || 0;
-    const remaining = Math.max(0, total - paid);
-    $('inv-subtotal').textContent = formatMoney(subtotal);
-    $('inv-discount-display').textContent = formatMoney(discount);
-    $('inv-total').textContent = formatMoney(total);
-    $('inv-paid-display').textContent = formatMoney(paid);
-    $('inv-remaining').textContent = formatMoney(remaining);
-}
-
-function updateOriginalInvoicesSelect() {
-    const type = $('inv-type').value;
-    const isSaleReturn = type === 'sale_return';
-    const originalType = isSaleReturn ? 'sale' : 'purchase';
-    const select = $('inv-original');
-    if (!select) return;
-    const originalInvoices = invoices.filter(i => i.type === originalType);
-    select.innerHTML = '<option value="">اختر الفاتورة الأصلية...</option>' +
-        originalInvoices.map(inv =>
-            `<option value="${inv.id}">${escapeHtml(inv.number)} — ${escapeHtml(inv.partyName)} — ${formatMoney(inv.total)} ${settings.currency}</option>`
-        ).join('');
-}
-
-function loadReturnItems() {
-    const originalId = $('inv-original').value;
-    if (!originalId) { showToast('اختر الفاتورة الأصلية أولاً', 'warn'); return; }
-    const original = invoices.find(i => i.id === originalId);
-    if (!original) { showToast('الفاتورة الأصلية غير موجودة', 'error'); return; }
-    $('inv-party').value = original.partyId;
-    $('invoice-items-body').innerHTML = '';
-    const previousReturns = {};
-    const returnType = $('inv-type').value;
-    invoices.forEach(inv => {
-        if (inv.type === returnType && inv.originalInvoiceId === originalId) {
-            (inv.items || []).forEach(it => {
-                previousReturns[it.productId] = (previousReturns[it.productId] || 0) + it.qty;
-            });
-        }
-    });
-    (original.items || []).forEach(item => {
-        const alreadyReturned = previousReturns[item.productId] || 0;
-        const availableToReturn = item.qty - alreadyReturned;
-        addReturnItemRow(item, availableToReturn);
-    });
-    if (original.items.length === 0) showToast('الفاتورة الأصلية لا تحتوي على أصناف', 'error');
-}
-
-function addReturnItemRow(item, maxQty) {
-    const rowId = 'inv-item-' + Date.now() + Math.random().toString(36).slice(2, 6);
-    const tbody = $('invoice-items-body');
-    const tr = document.createElement('tr');
-    tr.id = rowId;
-    tr.className = 'border-b';
-    tr.dataset.productId = item.productId;
-    tr.dataset.maxQty = maxQty;
-    tr.dataset.cost = item.costPrice || 0;
-    tr.innerHTML = `
-        <td class="p-2">
-            <div class="text-sm font-semibold">${escapeHtml(item.name)}</div>
-            <div class="text-xs text-gray-500">الأصلية: ${item.qty} | المتاح: <span class="font-bold text-red-600">${maxQty}</span></div>
-        </td>
-        <td class="p-2"><input type="number" class="inv-item-qty w-full border rounded p-1 text-sm" value="0" min="0" max="${maxQty}" oninput="validateReturnQty(this); recalcInvoice();"></td>
-        <td class="p-2"><input type="number" class="inv-item-price w-full border rounded p-1 text-sm" value="${item.price}" min="0" step="0.01" oninput="recalcInvoice()"></td>
-        <td class="p-2 inv-item-total font-semibold">0.00</td>
-        <td class="p-2"><button type="button" onclick="removeInvoiceItem('${rowId}')" class="text-red-500 hover:text-red-700 text-lg">&times;</button></td>
-    `;
-    tbody.appendChild(tr);
-}
-
-function validateReturnQty(input) {
-    const tr = input.closest('tr');
-    const max = parseFloat(tr.dataset.maxQty) || 0;
-    const val = parseFloat(input.value) || 0;
-    if (val > max) { input.value = max; showToast(`الحد الأقصى للإرجاع: ${max}`, 'warn'); }
-    if (val < 0) input.value = 0;
-}
-
-// ============ Invoice Submit ============
-$('invoice-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const type = $('inv-type').value;
-    const isSale = type === 'sale';
-    const isPurchase = type === 'purchase';
-    const isSaleReturn = type === 'sale_return';
-    const isPurchaseReturn = type === 'purchase_return';
-    const isReturn = isSaleReturn || isPurchaseReturn;
-    const isSaleLike = isSale || isSaleReturn;
-    const partyId = $('inv-party').value;
-    if (!partyId) { showToast('اختر الجهة', 'error'); return; }
-    const partyArr = isSaleLike ? customers : suppliers;
-    const party = partyArr.find(p => p.id === partyId);
-    if (!party) { showToast('الجهة غير موجودة', 'error'); return; }
-
-    let originalInvoice = null;
-    if (isReturn) {
-        const originalId = $('inv-original').value;
-        if (!originalId) { showToast('اختر الفاتورة الأصلية', 'error'); return; }
-        originalInvoice = invoices.find(i => i.id === originalId);
-        if (!originalInvoice) { showToast('الفاتورة الأصلية غير موجودة', 'error'); return; }
-    }
-
-    const items = [];
-    document.querySelectorAll('#invoice-items-body tr').forEach(tr => {
-        const productId = tr.dataset.productId || tr.querySelector('.inv-item-product')?.value;
-        const qty = parseFloat(tr.querySelector('.inv-item-qty')?.value) || 0;
-        const price = parseFloat(tr.querySelector('.inv-item-price')?.value) || 0;
-        const cost = parseFloat(tr.dataset.cost) || 0;
-        if (productId && qty > 0) {
-            const product = products.find(p => p.id === productId);
-            items.push({ productId, name: product?.name || 'غير معروف', qty, price, costPrice: cost, total: qty * price });
-        }
-    });
-    if (items.length === 0) { showToast('أضف بنداً واحداً على الأقل', 'error'); return; }
-
-    if (isReturn && originalInvoice) {
-        const previousReturns = {};
-        invoices.forEach(inv => {
-            if (inv.type === type && inv.originalInvoiceId === originalInvoice.id) {
-                (inv.items || []).forEach(it => {
-                    previousReturns[it.productId] = (previousReturns[it.productId] || 0) + it.qty;
-                });
-            }
-        });
-        for (const item of items) {
-            const originalItem = originalInvoice.items.find(i => i.productId === item.productId);
-            if (!originalItem) { showToast(`الصنف "${item.name}" غير موجود في الأصلية`, 'error'); return; }
-            const alreadyReturned = previousReturns[item.productId] || 0;
-            const availableToReturn = originalItem.qty - alreadyReturned;
-            if (item.qty > availableToReturn) { showToast(`الكمية المُرتجعة تتجاوز المتاح (${availableToReturn})`, 'error'); return; }
-        }
-    }
-    if (isSale || isPurchaseReturn) {
-        for (const item of items) {
-            const p = products.find(x => x.id === item.productId);
-            if (!p) { showToast(`الصنف "${item.name}" غير موجود`, 'error'); return; }
-            if (p.qty < item.qty) { showToast(`الكمية غير كافية للصنف "${p.name}" (متاح: ${p.qty})`, 'error'); return; }
-        }
-    }
-
-    const subtotal = items.reduce((s, i) => s + i.total, 0);
-    const discount = parseFloat($('inv-discount').value) || 0;
-    const total = Math.max(0, subtotal - discount);
-    const paid = parseFloat($('inv-paid').value) || 0;
-    const remaining = Math.max(0, total - paid);
-
-    const invoice = {
-        type, number: $('inv-number-display').value,
-        partyId, partyName: party.name, items,
-        subtotal, discount, total, paid, remaining,
-        paymentMethod: $('inv-payment-method').value,
-        notes: $('inv-notes').value.trim(),
-        date: $('inv-date').value || new Date().toISOString().slice(0, 10),
-        originalInvoiceId: originalInvoice?.id || null,
-        originalInvoiceNumber: originalInvoice?.number || null,
-        ownerId: currentUser.uid, createdAt: serverTimestamp()
-    };
-
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    submitBtn.disabled = true; submitBtn.textContent = 'جارٍ الحفظ...';
-    try {
-        const invRef = await addDoc(collection(db, 'invoices'), invoice);
-        for (const item of items) {
-            const p = products.find(x => x.id === item.productId);
-            if (!p) continue;
-            let newQty = p.qty;
-            if (isSale) newQty -= item.qty;
-            else if (isPurchase) newQty += item.qty;
-            else if (isSaleReturn) newQty += item.qty;
-            else if (isPurchaseReturn) newQty -= item.qty;
-            if (newQty < 0) newQty = 0;
-            await updateDoc(doc(db, 'products', item.productId), { qty: newQty, updatedAt: serverTimestamp() });
-        }
-        if (isSale && remaining > 0) {
-            await updateDoc(doc(db, 'customers', partyId), { balance: (party.balance || 0) + remaining });
-        } else if (isSaleReturn) {
-            await updateDoc(doc(db, 'customers', partyId), { balance: (party.balance || 0) - (total - paid) });
-        } else if (isPurchase && remaining > 0) {
-            await updateDoc(doc(db, 'suppliers', partyId), { balance: (party.balance || 0) + remaining });
-        } else if (isPurchaseReturn) {
-            await updateDoc(doc(db, 'suppliers', partyId), { balance: (party.balance || 0) - (total - paid) });
-        }
-
-        const msgs = { sale: 'تم حفظ فاتورة البيع ✅', purchase: 'تم حفظ فاتورة الشراء ✅', sale_return: 'تم حفظ مرتجع البيع ✅', purchase_return: 'تم حفظ مرتجع الشراء ✅' };
-        showToast(msgs[type] || 'تم الحفظ ✅');
-        closeModal('invoice-modal');
-        setTimeout(() => viewInvoice(invRef.id), 400);
-    } catch (err) {
-        showToast('فشل الحفظ: ' + err.message, 'error');
-    } finally {
-        submitBtn.disabled = false; submitBtn.textContent = 'حفظ الفاتورة';
-    }
-});
-
-function renderInvoices() {
-    const tbody = $('invoices-table-body');
-    const search = ($('invoice-search')?.value || '').toLowerCase();
-    const typeFilter = $('invoice-type-filter')?.value || 'all';
-    const dateFilter = $('invoice-date-filter')?.value || '';
-    let list = invoices;
-    if (search) list = list.filter(i => (i.number || '').toLowerCase().includes(search) || (i.partyName || '').toLowerCase().includes(search));
-    if (typeFilter !== 'all') list = list.filter(i => i.type === typeFilter);
-    if (dateFilter) list = list.filter(i => i.date === dateFilter);
-    if (list.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-gray-400">لا توجد فواتير</td></tr>`; return; }
-    const typeLabels = { sale: 'بيع', purchase: 'شراء', sale_return: '↩️ مرتجع بيع', purchase_return: '↩️ مرتجع شراء' };
-    const typeColors = { sale: 'bg-blue-100 text-blue-700', purchase: 'bg-orange-100 text-orange-700', sale_return: 'bg-red-100 text-red-700', purchase_return: 'bg-purple-100 text-purple-700' };
-    tbody.innerHTML = list.map(inv => {
-        const isReturn = inv.type === 'sale_return' || inv.type === 'purchase_return';
-        return `
-        <tr class="border-b hover:bg-gray-50 ${isReturn ? 'bg-red-50/30' : ''}">
-            <td class="p-3 text-sm font-mono">${escapeHtml(inv.number || '-')}</td>
-            <td class="p-3"><span class="text-xs px-2 py-1 rounded ${typeColors[inv.type] || 'bg-gray-100'}">${typeLabels[inv.type] || inv.type}</span></td>
-            <td class="p-3 font-semibold">${escapeHtml(inv.partyName || '-')}${isReturn && inv.originalInvoiceNumber ? `<div class="text-xs text-gray-500">أصل: #${escapeHtml(inv.originalInvoiceNumber)}</div>` : ''}</td>
-            <td class="p-3 font-bold ${isReturn ? 'text-red-600' : ''}">${formatMoney(inv.total)}</td>
-            <td class="p-3 text-green-600">${formatMoney(inv.paid)}</td>
-            <td class="p-3 ${inv.remaining > 0 ? 'text-red-600 font-bold' : 'text-gray-400'}">${formatMoney(inv.remaining)}</td>
-            <td class="p-3 text-sm text-gray-500">${inv.date || formatDate(inv.createdAt)}</td>
-            <td class="p-3"><button onclick="viewInvoice('${inv.id}')" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded">عرض</button></td>
-        </tr>`;
-    }).join('');
-}
-
-function viewInvoice(id) {
-    const inv = invoices.find(i => i.id === id);
-    if (!inv) return;
-    const typeLabels = { sale: 'فاتورة بيع', purchase: 'فاتورة شراء', sale_return: 'مرتجع بيع', purchase_return: 'مرتجع شراء' };
-    const isReturn = inv.type === 'sale_return' || inv.type === 'purchase_return';
-    const partyLabel = (inv.type === 'sale' || inv.type === 'sale_return') ? 'العميل' : 'المورد';
-    const headerColor = isReturn ? 'text-red-700' : 'text-blue-700';
-    const html = `
-        <div class="space-y-4">
-            <div class="flex justify-between items-start border-b pb-3">
-                <div>
-                    <h2 class="text-xl font-bold">${escapeHtml(settings.storeName || 'متجري')}</h2>
-                    ${settings.phone ? `<p class="text-sm text-gray-600">📞 ${escapeHtml(settings.phone)}</p>` : ''}
-                    ${settings.address ? `<p class="text-sm text-gray-600">📍 ${escapeHtml(settings.address)}</p>` : ''}
-                </div>
-                <div class="text-left">
-                    <p class="text-lg font-bold ${headerColor}">${typeLabels[inv.type]}</p>
-                    <p class="text-sm font-mono">#${escapeHtml(inv.number)}</p>
-                    <p class="text-sm text-gray-600">${inv.date}</p>
-                </div>
-            </div>
-            ${isReturn && inv.originalInvoiceNumber ? `<div class="bg-red-50 p-3 rounded-lg border border-red-200"><p class="text-sm text-red-800"><strong>↩️ مرتبط بالأصلية:</strong> #${escapeHtml(inv.originalInvoiceNumber)}</p></div>` : ''}
-            <div class="grid grid-cols-2 gap-3 text-sm">
-                <div><strong>${partyLabel}:</strong> ${escapeHtml(inv.partyName)}</div>
-                <div><strong>طريقة الدفع:</strong> ${{cash:'نقدي', credit:'آجل', partial:'جزئي'}[inv.paymentMethod] || '-'}</div>
-            </div>
-            <table class="w-full text-right border-collapse">
-                <thead><tr class="bg-gray-100">
-                    <th class="p-2 border text-sm">الصنف</th>
-                    <th class="p-2 border text-sm">الكمية</th>
-                    <th class="p-2 border text-sm">السعر</th>
-                    <th class="p-2 border text-sm">الإجمالي</th>
-                </tr></thead>
-                <tbody>
-                    ${(inv.items || []).map(it => `
-                        <tr>
-                            <td class="p-2 border text-sm">${escapeHtml(it.name)}</td>
-                            <td class="p-2 border text-sm">${it.qty}</td>
-                            <td class="p-2 border text-sm">${formatMoney(it.price)}</td>
-                            <td class="p-2 border text-sm">${formatMoney(it.total)}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-            <div class="flex justify-end">
-                <div class="w-64 space-y-1 text-sm">
-                    <div class="flex justify-between"><span>الإجمالي الفرعي:</span><span>${formatMoney(inv.subtotal)}</span></div>
-                    <div class="flex justify-between"><span>الخصم:</span><span>${formatMoney(inv.discount)}</span></div>
-                    <div class="flex justify-between font-bold border-t pt-1 text-base"><span>الإجمالي:</span><span>${formatMoney(inv.total)} ${settings.currency}</span></div>
-                    <div class="flex justify-between text-green-600"><span>المدفوع:</span><span>${formatMoney(inv.paid)}</span></div>
-                    <div class="flex justify-between text-red-600 font-bold"><span>المتبقي:</span><span>${formatMoney(inv.remaining)}</span></div>
-                </div>
-            </div>
-            ${inv.notes ? `<div class="bg-gray-50 p-3 rounded text-sm"><strong>ملاحظات:</strong> ${escapeHtml(inv.notes)}</div>` : ''}
-            <div class="text-center text-xs text-gray-400 pt-3 border-t">شكراً لتعاملكم معنا</div>
-        </div>`;
-    $('invoice-print-area').innerHTML = html;
-    openModal('invoice-view-modal');
-}
-
-function printInvoice() {
-    const content = $('invoice-print-area').innerHTML;
-    const win = window.open('', '', 'width=800,height=600');
-    win.document.write(`<html dir="rtl"><head><title>طباعة</title><style>body{font-family:'Cairo',Tahoma,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px;text-align:right;font-size:12px}th{background:#f3f4f6}h2{margin:0}</style></head><body>${content}</body></html>`);
-    win.document.close();
-    setTimeout(() => win.print(), 400);
-}
-
 // ============ Expenses ============
 function openExpenseModal(id) {
     $('expense-form').reset();
@@ -2266,18 +2307,36 @@ function renderExpenses() {
     `).join('');
 }
 
-// ============ Payments ============
+// ============ Payments - نسخة مُصلحة ============
 function openPaymentModal(partyType, partyId) {
     const arr = partyType === 'customer' ? customers : suppliers;
     const party = arr.find(p => p.id === partyId);
     if (!party) { showToast('الجهة غير موجودة', 'error'); return; }
+    
     $('payment-form').reset();
     $('pay-party-id').value = partyId;
     $('pay-party-type').value = partyType;
     $('pay-party-name').textContent = party.name;
-    $('pay-current-balance').textContent = formatMoney(party.balance || 0) + ' ' + settings.currency;
+    
+    // ✅ استخدام الدالة الموحدة لحساب الرصيد الفعلي
+    const actualBalance = getPartyActualBalance(party, partyType);
+    
+    const balanceLabel = partyType === 'customer'
+        ? (actualBalance > 0 ? ' (مدين لنا)' : actualBalance < 0 ? ' (دائن له)' : ' (متوازن)')
+        : (actualBalance > 0 ? ' (نحن مدينون)' : actualBalance < 0 ? ' (دائن لنا)' : ' (متوازن)');
+    
+    $('pay-current-balance').textContent = formatMoney(Math.abs(actualBalance)) + ' ' + settings.currency + balanceLabel;
+    
     $('pay-direction').value = partyType === 'customer' ? 'in' : 'out';
-    $('payment-modal-title').textContent = partyType === 'customer' ? `💵 تحصيل من ${party.name}` : `💸 سداد لـ ${party.name}`;
+    $('payment-modal-title').textContent = partyType === 'customer'
+        ? `💵 تحصيل دفعة من ${party.name}`
+        : `💸 سداد دفعة لـ ${party.name}`;
+    
+    // ✅ اقتراح المبلغ المتبقي تلقائياً
+    if (actualBalance > 0) {
+        $('pay-amount').value = actualBalance.toFixed(2);
+    }
+    
     openModal('payment-modal');
 }
 
@@ -2290,6 +2349,7 @@ $('payment-form').addEventListener('submit', async (e) => {
     const arr = partyType === 'customer' ? customers : suppliers;
     const party = arr.find(p => p.id === partyId);
     if (!party) { showToast('الجهة غير موجودة', 'error'); return; }
+    
     const paymentData = {
         partyId, partyType, partyName: party.name, amount,
         direction: $('pay-direction').value,
@@ -2298,11 +2358,12 @@ $('payment-form').addEventListener('submit', async (e) => {
         date: new Date().toISOString().slice(0, 10),
         ownerId: currentUser.uid, createdAt: serverTimestamp()
     };
+    
     const submitBtn = e.target.querySelector('button[type="submit"]');
     submitBtn.disabled = true; submitBtn.textContent = 'جارٍ...';
     try {
+        // ✅ نحفظ الدفعة فقط — ولا نحدّث balance (لأنها محسوبة ديناميكياً)
         await addDoc(collection(db, 'payments'), paymentData);
-        await updateDoc(doc(db, partyType === 'customer' ? 'customers' : 'suppliers', partyId), { balance: (party.balance || 0) - amount });
         showToast(`✅ تم تسجيل دفعة ${formatMoney(amount)}`, 'success');
         closeModal('payment-modal');
         if (!$('statement-modal').classList.contains('hidden')) {
@@ -2315,12 +2376,15 @@ $('payment-form').addEventListener('submit', async (e) => {
     }
 });
 
+// ============ Statement ============
 function openStatement(partyType, partyId) {
     const arr = partyType === 'customer' ? customers : suppliers;
     const party = arr.find(p => p.id === partyId);
     if (!party) { showToast('الجهة غير موجودة', 'error'); return; }
+
     const movements = [];
-    const openingBalance = party.openingBalance || 0;
+    const openingBalance = parseFloat(party.openingBalance) || 0;
+    
     if (openingBalance !== 0) {
         movements.push({
             date: party.createdAt ? dateKey(party.createdAt) : 'بداية',
@@ -2330,16 +2394,22 @@ function openStatement(partyType, partyId) {
             sortKey: 0, createdAt: 0
         });
     }
+
+    // الفواتير
     invoices.forEach(inv => {
         if (inv.partyId !== partyId) return;
         let debit = 0, credit = 0, desc = '';
+        const total = parseFloat(inv.total) || 0;
+        const paid = parseFloat(inv.paid) || 0;
+        
         if (partyType === 'customer') {
-            if (inv.type === 'sale') { debit = inv.total; desc = `فاتورة بيع #${inv.number}`; }
-            else if (inv.type === 'sale_return') { credit = inv.total; desc = `↩️ مرتجع بيع #${inv.number}`; }
+            if (inv.type === 'sale') { debit = total; desc = `فاتورة بيع #${inv.number}`; }
+            else if (inv.type === 'sale_return') { credit = total; desc = `↩️ مرتجع بيع #${inv.number}`; }
         } else {
-            if (inv.type === 'purchase') { credit = inv.total; desc = `فاتورة شراء #${inv.number}`; }
-            else if (inv.type === 'purchase_return') { debit = inv.total; desc = `↩️ مرتجع شراء #${inv.number}`; }
+            if (inv.type === 'purchase') { credit = total; desc = `فاتورة شراء #${inv.number}`; }
+            else if (inv.type === 'purchase_return') { debit = total; desc = `↩️ مرتجع شراء #${inv.number}`; }
         }
+        
         if (debit || credit) {
             movements.push({
                 date: inv.date || formatDate(inv.createdAt),
@@ -2348,17 +2418,20 @@ function openStatement(partyType, partyId) {
                 createdAt: inv.createdAt?.toDate?.()?.getTime() || 0
             });
         }
-        if (inv.paid > 0) {
+        
+        if (paid > 0) {
             movements.push({
                 date: inv.date || formatDate(inv.createdAt),
                 description: `💵 دفعة مع الفاتورة #${inv.number}`,
-                debit: (partyType === 'supplier' && inv.type === 'purchase') || (partyType === 'customer' && inv.type === 'sale_return') ? inv.paid : 0,
-                credit: (partyType === 'customer' && inv.type === 'sale') || (partyType === 'supplier' && inv.type === 'purchase_return') ? inv.paid : 0,
+                debit: (partyType === 'supplier' && inv.type === 'purchase') || (partyType === 'customer' && inv.type === 'sale_return') ? paid : 0,
+                credit: (partyType === 'customer' && inv.type === 'sale') || (partyType === 'supplier' && inv.type === 'purchase_return') ? paid : 0,
                 sortKey: new Date(inv.date || inv.createdAt?.toDate?.() || Date.now()).getTime() + 1,
                 createdAt: (inv.createdAt?.toDate?.()?.getTime() || 0) + 1
             });
         }
     });
+
+    // الدفعات المستقلة
     payments.forEach(pay => {
         if (pay.partyId !== partyId) return;
         movements.push({
@@ -2370,16 +2443,20 @@ function openStatement(partyType, partyId) {
             createdAt: pay.createdAt?.toDate?.()?.getTime() || 0
         });
     });
+
     movements.sort((a, b) => a.sortKey - b.sortKey || a.createdAt - b.createdAt);
     let running = 0;
     movements.forEach(m => { running += (m.debit || 0) - (m.credit || 0); m.running = running; });
+    
     const totalDebit = movements.reduce((s, m) => s + (m.debit || 0), 0);
     const totalCredit = movements.reduce((s, m) => s + (m.credit || 0), 0);
     const finalBalance = running;
+
     const typeLabel = partyType === 'customer' ? 'عميل' : 'مورد';
     const balanceLabel = partyType === 'customer'
         ? (finalBalance > 0 ? 'مدين لك' : finalBalance < 0 ? 'دائن له' : 'متوازن')
         : (finalBalance > 0 ? 'أنت مدين له' : finalBalance < 0 ? 'دائن لك' : 'متوازن');
+
     const html = `
         <div class="space-y-4">
             <div class="flex justify-between items-start border-b pb-3">
@@ -2438,6 +2515,7 @@ function openStatement(partyType, partyId) {
             ${party.notes ? `<div class="bg-yellow-50 p-3 rounded text-sm"><strong>ملاحظات:</strong> ${escapeHtml(party.notes)}</div>` : ''}
             <div class="text-center text-xs text-gray-400 pt-3 border-t">نظام مخزن — ${new Date().toLocaleDateString('ar-EG')}</div>
         </div>`;
+    
     $('statement-title').textContent = `كشف حساب: ${party.name}`;
     $('statement-print-area').innerHTML = html;
     $('statement-print-area').dataset.partyType = partyType;
@@ -2461,7 +2539,7 @@ function printStatement() {
     setTimeout(() => win.print(), 400);
 }
 
-// ============ Dashboard & Reports ============
+// ============ Dashboard - نسخة مُصلحة ============
 function renderDashboard() {
     const today = new Date().toISOString().slice(0, 10);
     const todaySales = invoices.filter(i => i.type === 'sale' && i.date === today).reduce((s, i) => s + (i.total || 0), 0);
@@ -2469,8 +2547,14 @@ function renderDashboard() {
     $('dash-products-count').textContent = products.length;
     const lowStock = products.filter(p => p.qty <= (p.minQty ?? settings.lowStockThreshold));
     $('dash-low-stock').textContent = lowStock.length;
-    const debt = customers.reduce((s, c) => s + Math.max(0, c.balance || 0), 0);
+    
+    // ✅ حساب ديون العملاء من الفواتير الفعلية (وليس من الحقل المخزّن)
+    const debt = customers.reduce((sum, c) => {
+        const balance = getPartyActualBalance(c, 'customer');
+        return sum + (balance > 0 ? balance : 0);
+    }, 0);
     $('dash-customers-debt').textContent = formatMoney(debt);
+    
     const lowList = $('dash-low-stock-list');
     if (lowStock.length === 0) lowList.innerHTML = '<p class="text-sm text-gray-400 text-center py-3">لا توجد أصناف منخفضة ✅</p>';
     else lowList.innerHTML = lowStock.slice(0, 10).map(p => `
@@ -2478,6 +2562,7 @@ function renderDashboard() {
             <span class="text-sm font-semibold">${escapeHtml(p.name)}</span>
             <span class="text-xs bg-red-600 text-white px-2 py-1 rounded">${p.qty} متبقي</span>
         </div>`).join('');
+    
     const recent = $('dash-recent-invoices');
     const recentList = invoices.slice(0, 8);
     if (recentList.length === 0) recent.innerHTML = '<p class="text-sm text-gray-400 text-center py-3">لا توجد فواتير بعد</p>';
@@ -2606,7 +2691,7 @@ async function exportBackup() {
     try {
         showToast('جارٍ التجميع...', 'info');
         const backup = {
-            _meta: { ownerEmail: currentUser.email, ownerId: currentUser.uid, exportedAt: new Date().toISOString(), version: '2.0', storeName: settings.storeName || '' },
+            _meta: { ownerEmail: currentUser.email, ownerId: currentUser.uid, exportedAt: new Date().toISOString(), version: '2.1', storeName: settings.storeName || '' },
             _stats: {}
         };
         const collections = ['products', 'customers', 'suppliers', 'invoices', 'payments', 'expenses'];
@@ -2795,7 +2880,7 @@ Object.assign(window, {
     switchAuthMode, logout, switchTab,
     openModal, closeModal, confirmDialog,
     openProductModal, deleteProduct, renderProducts, generateMissingBarcodes,
-    openPartyModal, deleteParty, renderParties,
+    openPartyModal, deleteParty, renderParties, getPartyActualBalance,
     openInvoiceModal, addInvoiceItem, removeInvoiceItem,
     onInvoiceItemProductChange, recalcInvoice, renderInvoices,
     viewInvoice, printInvoice, updateInvoicePartySelect,
@@ -2810,7 +2895,7 @@ Object.assign(window, {
     showBarcodeSuggestions, selectSuggestion, quickAddFromSearch, openQuickAddProductModal
 });
 
-console.log('✅ النظام جاهز — نسخة سوبر ماركت مع اقتراحات ذكية + باركود + كاميرا + اختصارات');
+console.log('✅ النظام جاهز — نسخة 2.1: اقتراحات + باركود + كاميرا + أرصدة موحّدة');
 </script>
 </body>
 </html>
